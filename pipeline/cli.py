@@ -133,7 +133,7 @@ def _cmd_serve(args) -> int:
 
     url = f"http://{host}:{port}"
     print("=" * 60)
-    print("Molecular Docking Pipeline — web interface")
+    print("Molecular Docking Pipeline - web interface")
     print(f"  Local address:  {url}")
     print(f"  Docs (OpenAPI): {url}/docs")
     print("  Press Ctrl+C to stop.")

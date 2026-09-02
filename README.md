@@ -1,8 +1,18 @@
 # Molecular Docking Pipeline 🧬
 
-A self-contained, reproducible **receptor + ligand → AutoDock Vina docking → interaction report** pipeline. Reference implementation inspired by the docking module of the open-source [bio-nexus](https://github.com/Samadsaifi14/bio-nexus-) platform, scoped as a small standalone project.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](#running-tests)
+[![AutoDock Vina](https://img.shields.io/badge/AutoDock%20Vina-1.2.5-brightgreen)](https://github.com/ccsb-scripps/AutoDock-Vina)
+[![Tests](https://img.shields.io/badge/tests-9%20passing-success)]()
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
-One command in → one interpreted report out. No manual PDBQT editing, no GUI, no web tabs.
+A self-contained, reproducible **receptor + ligand → AutoDock Vina docking →
+interaction report** pipeline. Reference implementation inspired by the docking
+module of the open-source [bio-nexus](https://github.com/Samadsaifi14/bio-nexus-)
+platform, scoped as a small standalone project.
+
+One command in → one interpreted report out — via the **CLI or a local browser
+interface** (`python -m pipeline serve`).
 
 ---
 
@@ -186,14 +196,50 @@ Passing `--seed` fixes Vina's random number stream; the same input + seed produc
 
 ---
 
-## Limitations & honesty
+## Scientific integrity, ethics & responsible use
 
-- **Affinities are predictions**, not measurements — useful for *relative* ranking.
+### Limitations of predictions
+
+- **Affinities are predictions**, not measurements — useful only for *relative* ranking of candidates, never as absolute binding constants or safety data.
 - Rigid-receptor docking (no induced fit, no flexible side chains).
 - Protonation fixed at the chosen pH; titratable residues may differ in vivo.
-- Interaction mapping uses geometric distance thresholds — confirm visually.
+- Interaction mapping uses geometric distance thresholds — always confirm visually.
 - Blind pockets: for high-quality results, center the box on a known site (use `--box-from` or `--box-center`).
+- The bundled AutoDock Vina scoring function is an empirical estimate; it is not a substitute for experimental validation.
+
+### Responsible use
+
+Molecular docking is a standard academic technique. We ask users to apply it
+ethically and in line with the law. Predictions here must **not** be used as the
+sole basis for decisions affecting human health or the environment (dosing,
+toxicity clearance, formulation), and must not be used to facilitate harmful
+substances or weapons. For the full policy and how to report concerns, see
+[`SECURITY.md`](SECURITY.md).
+
+### How to cite
+
+If you use this tool in research, please cite it and the underlying scorer:
+
+- **This pipeline:** Zaiban Khan, *Molecular Docking Pipeline* (v1.1.0), 2026.
+  `https://github.com/zaibankhan/Molecular-Docking` (see `CITATION.cff`).
+- **AutoDock Vina:** O. Trott & A. J. Olson, *AutoDock Vina: improving the speed
+  and accuracy of docking with a new scoring function, efficient optimization,
+  and multithreading*, J. Comput. Chem. 31 (2010) 455–461.
+  https://doi.org/10.1002/jcc.21334
+- Optional structure toolkit: The RDKit Open-Source Cheminformatics Software,
+  https://www.rdkit.org
+
+## Governance & contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md),
+and [`CHANGELOG.md`](CHANGELOG.md). This project follows [Keep a Changelog](https://keepachangelog.com/)
+and [Semantic Versioning](https://semver.org/).
 
 ## License & attribution
 
-Independent project inspired by the MIT-licensed [`bio-nexus`](https://github.com/Samadsaifi14/bio-nexus-) platform. AutoDock Vina is Apache-2.0 (source: [ccsb-scripps/AutoDock-Vina](https://github.com/ccsb-scripps/AutoDock-Vina)) — see the PRD appendix for the environment as bundled.
+This project is released under the **MIT License** — see [`LICENSE`](LICENSE).
+
+It is an independent project inspired by the MIT-licensed
+[`bio-nexus`](https://github.com/Samadsaifi14/bio-nexus-) platform. AutoDock Vina
+is Apache-2.0 (source: [ccsb-scripps/AutoDock-Vina](https://github.com/ccsb-scripps/AutoDock-Vina))
+— see the PRD appendix for the environment as bundled.

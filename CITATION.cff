@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this software in research, please cite it and the underlying AutoDock Vina scoring function."
+title: "Molecular Docking Pipeline"
+type: software
+abstract: >-
+  A self-contained, reproducible receptor + ligand -> AutoDock Vina docking
+  pipeline that prepares structures, runs AutoDock Vina, and produces ranked
+  poses, interaction maps, and an interpreted report. Educational / research use.
+authors:
+  - family-names: Khan
+    given-names: Zaiban
+    orcid: ""
+date-released: "2026-09-02"
+license: MIT
+version: 1.1.0
+keywords:
+  - molecular docking
+  - AutoDock Vina
+  - structure-based drug design
+  - computational chemistry
+  - bioinformatics

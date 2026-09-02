@@ -1,0 +1,11 @@
+# Core scientific stack
+rdkit>=2023.9
+meeko>=0.5
+numpy>=1.24
+scipy>=1.10
+gemmi>=0.6
+
+# Structure / input helpers
+biopython>=1.81
+
+# AutoDock Vina is a bundled binary (see bin/) and is NOT installed via pip.

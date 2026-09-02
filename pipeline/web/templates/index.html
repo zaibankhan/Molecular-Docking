@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Molecular Docking Pipeline</title>
+<style>
+  :root { --accent:#2563eb; --bg:#f8fafc; --card:#ffffff; --border:#e2e8f0; --text:#0f172a; --muted:#64748b; }
+  * { box-sizing:border-box; }
+  body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); margin:0; }
+  header { background:var(--accent); color:#fff; padding:18px 28px; }
+  header h1 { margin:0; font-size:20px; }
+  header p { margin:4px 0 0; font-size:13px; opacity:.85; }
+  main { max-width:860px; margin:28px auto; padding:0 20px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px 26px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  label { display:block; font-weight:600; margin:14px 0 4px; font-size:14px; }
+  input, select { width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .hint { color:var(--muted); font-size:12px; margin-top:3px; }
+  button { margin-top:22px; width:100%; padding:13px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; }
+  button:hover { background:#1d4ed8; }
+  .badge { display:inline-block; background:#dcfce7; color:#166534; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+  a { color:var(--accent); }
+  footer { text-align:center; color:var(--muted); font-size:12px; padding:24px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Molecular Docking Pipeline</h1>
+  <p>AutoDock Vina · receptor + ligand → ranked poses · interactions · report</p>
+</header>
+<main>
+  <div class="card">
+    {% if has_result %}<span class="badge">A run already completed — see the results page</span>{% endif %}
+    <form method="post" action="/run">
+      <label>Receptor (file path or 4-char PDB ID)</label>
+      <input name="receptor" value="demo/receptor.pdb" placeholder="e.g. 1STP or ./demo/receptor.pdb" required>
+      <div class="hint">Local PDB file path, or an RCSB code like <code>1STP</code>.</div>
+
+      <label>Ligand (SMILES, file path, or compound name)</label>
+      <input name="ligand" value="C1C2C(C(=O)CCSC(=O)NCCC1)SCCC2C(=O)O" placeholder="SMILES, e.g. OC(=O)c1ccccc1C(=O)O — or aspirin / demo/ligand.sdf" required>
+      <div class="hint">Accepted: SMILES string, an SDF/MOL/PDB path, or a PubChem compound name.</div>
+
+      <div class="grid">
+        <div>
+          <label>Search box center (X,Y,Z)</label>
+          <input name="box_center" placeholder="optional — e.g. 11.12,1.68,-10.75">
+          <div class="hint">Leave blank to center on the ligand or set a box source below.</div>
+        </div>
+        <div>
+          <label>Box size (X,Y,Z angstrom)</label>
+          <input name="box_size" value="20,20,20">
+        </div>
+      </div>
+
+      <label>Box center from reference file (SDF/PDB/PDBQT)</label>
+      <input name="box_source" placeholder="optional — e.g. demo/pocket_btn.pdb">
+      <div class="hint">Center the box on a cocrystallized ligand / pocket-defining reference.</div>
+
+      <div class="grid">
+        <div><label>Exhaustiveness</label><input name="exhaustiveness" type="number" value="16" min="1"></div>
+        <div><label>Number of poses</label><input name="num_modes" type="number" value="5" min="1"></div>
+      </div>
+      <div class="grid">
+        <div><label>Seed</label><input name="seed" type="number" value="42"></div>
+        <div><label>pH</label><input name="ph" type="number" step="0.1" value="7.4"></div>
+      </div>
+
+      <button type="submit">Run docking</button>
+    </form>
+  </div>
+</main>
+<footer>Molecular Docking Pipeline · local web interface</footer>
+</body>
+</html>

@@ -89,6 +89,7 @@ config.txt        exact Vina invocation (reproducibility)
 
 ```
 python -m pipeline doctor                          # env check
+python -m pipeline serve [--port 8000]             # local web UI
 python -m pipeline run \
     --receptor <path|PDB_ID> \
     --ligand   <smiles|path|name> \
@@ -121,6 +122,31 @@ python -m pipeline run \
 
 ---
 
+## Web interface (browser-based)
+
+This is a **CLI pipeline** with an optional FastAPI web UI. To run it in your browser on **localhost**:
+
+```bash
+python -m pipeline serve --port 8000
+```
+
+Then open one of these in your browser:
+
+```
+http://127.0.0.1:8000        # main form + results
+http://localhost:8000        # same
+http://127.0.0.1:8000/docs   # interactive OpenAPI/endpoint docs
+```
+
+- `--host 127.0.0.1` (default) binds only to your machine; use `--host 0.0.0.0` to allow other devices on your network.
+- `--reload` auto-restarts on code changes (development).
+- Web submission writes normal pipeline outputs to `runs/<timestamp>/`; `results.json` and per-pose PDBs are on disk for PyMOL/Chimera.
+- Requires the web extras: `pillow`-free, just `fastapi`, `uvicorn[standard]`, `python-multipart`, `httpx` (install via `pip install -r requirements.txt`).
+
+> Note: the web app runs the same `pipeline` code — the browser is just a convenience front-end over the CLI engine.
+
+---
+
 ## Running tests
 
 ```bash
@@ -141,7 +167,8 @@ Passing `--seed` fixes Vina's random number stream; the same input + seed produc
 ```
 ├── PRD.md                 # Product requirements document
 ├── pipeline/              # Python package
-│   ├── cli.py             # doctor / run subcommands
+│   ├── cli.py             # doctor / run / serve subcommands
+│   ├── web/               # FastAPI browser interface (app.py + templates/)
 │   ├── orchestrator.py    # wires the stages together
 │   ├── receptor_prep.py   # PDB → cleaned PDB + PDBQT
 │   ├── ligand_prep.py     # SMILES/SDF → 3D + PDBQT (Meeko/RDKit)

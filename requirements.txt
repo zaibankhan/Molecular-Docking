@@ -8,4 +8,9 @@ gemmi>=0.6
 # Structure / input helpers
 biopython>=1.81
 
+# Web interface (optional, for `python -m pipeline serve`)
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+
 # AutoDock Vina is a bundled binary (see bin/) and is NOT installed via pip.

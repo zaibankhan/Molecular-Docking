@@ -71,6 +71,14 @@ def build_parser() -> argparse.ArgumentParser:
     doc_p = sub.add_parser("doctor", help="Check the environment and report detected tooling.")
     doc_p.add_argument("-v", "--verbose", action="store_true")
 
+    serve_p = sub.add_parser(
+        "serve",
+        help="Launch a local browser-based (FastAPI) web interface.",
+    )
+    serve_p.add_argument("--host", default="127.0.0.1", help="Bind address (default 127.0.0.1).")
+    serve_p.add_argument("--port", type=int, default=8000, help="Port (default 8000).")
+    serve_p.add_argument("--reload", action="store_true", help="Auto-reload on code changes.")
+
     return parser
 
 
@@ -111,6 +119,29 @@ def _cmd_doctor(args) -> int:
     return 0
 
 
+def _cmd_serve(args) -> int:
+    import uvicorn  # local import so CLI stays usable without the web extras
+
+    # Run from the project root so ./runs and relative demo/default paths resolve.
+    import os
+
+    os.chdir(str(Path(__file__).resolve().parent.parent))
+
+    host = args.host
+    port = args.port
+    reload = args.reload
+
+    url = f"http://{host}:{port}"
+    print("=" * 60)
+    print("Molecular Docking Pipeline — web interface")
+    print(f"  Local address:  {url}")
+    print(f"  Docs (OpenAPI): {url}/docs")
+    print("  Press Ctrl+C to stop.")
+    print("=" * 60)
+    uvicorn.run("pipeline.web.app:dapp", host=host, port=port, reload=reload)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -118,6 +149,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_run(args)
     if args.command == "doctor":
         return _cmd_doctor(args)
+    if args.command == "serve":
+        return _cmd_serve(args)
     parser.print_help()
     return 2
 

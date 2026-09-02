@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docking Results · Molecular Docking Pipeline</title>
+<style>
+  :root { --accent:#2563eb; --bg:#f8fafc; --card:#ffffff; --border:#e2e8f0; --text:#0f172a; --muted:#64748b; }
+  * { box-sizing:border-box; }
+  body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); margin:0; }
+  header { background:var(--accent); color:#fff; padding:18px 28px; }
+  header h1 { margin:0; font-size:20px; }
+  header p { margin:4px 0 0; font-size:13px; opacity:.85; }
+  a { color:var(--accent); }
+  main { max-width:980px; margin:28px auto; padding:0 20px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px 24px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  h2 { margin-top:0; font-size:17px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.03em; }
+  .top { color:#166534; font-weight:700; }
+  .error { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:8px; padding:14px 16px; }
+  .key { color:var(--muted); }
+  .run { margin-top:16px; }
+  .btn { display:inline-block; background:var(--accent); color:#fff !important; padding:7px 14px; border-radius:6px; text-decoration:none; font-size:14px; }
+  .meta { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; font-size:13px; }
+  .meta div { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; }
+  .meta b { display:block; color:var(--muted); font-weight:600; font-size:11px; }
+  footer { text-align:center; color:var(--muted); font-size:12px; padding:24px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Docking Results</h1>
+  <p>Molecular Docking Pipeline · AutoDock Vina</p>
+</header>
+<main>
+  {% if error %}
+    <div class="error"><b>Run failed:</b> {{ error }}</div>
+  {% endif %}
+
+  {% if results %}
+    {% set dock = results.get('docking', {}) %}
+    {% set ligand = results.get('ligand', {}) %}
+    {% set box = results.get('box', {}) %}
+    {% set inter = results.get('interactions', []) %}
+
+    <div class="card">
+      <h2>Best pose</h2>
+      <table>
+        <tr><th>Pose #</th><td>{{ dock.best_pose.index }}</td></tr>
+        <tr><th>Affinity</th><td class="top">{{ dock.best_pose.affinity_kcal_mol }} kcal/mol</td></tr>
+        <tr><th>Vina</th><td>{{ dock.vina_version }}</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>All poses (ranked)</h2>
+      <table>
+        <tr><th>Pose</th><th>Affinity (kcal/mol)</th><th>RMSD l.b.</th><th>RMSD u.b.</th></tr>
+        {% for p in dock.poses %}
+        <tr class="{{ 'top' if loop.first }}">
+          <td>{{ p.index }}</td>
+          <td>{{ p.affinity_kcal_mol }}</td>
+          <td>{{ p.rmsd_lower_bound }}</td>
+          <td>{{ p.rmsd_upper_bound }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Ligand properties</h2>
+      <table>
+        <tr><th>Formula</th><td>{{ ligand.formula }}</td><th>MW</th><td>{{ ligand.mol_weight }} Da</td></tr>
+        <tr><th>Heavy atoms</th><td>{{ ligand.heavy_atoms }}</td><th>Rotatable bonds</th><td>{{ ligand.rotatable_bonds }}</td></tr>
+        <tr><th>H-bond donors</th><td>{{ ligand.hbd }}</td><th>H-bond acceptors</th><td>{{ ligand.hba }}</td></tr>
+        <tr><th>LogP</th><td>{{ ligand.logp }}</td><th>Canonical SMILES</th><td>{{ ligand.canonical_smiles }}</td></tr>
+      </table>
+      {% if ligand.admet %}
+      <p>Lipinski rule of five: <b>{{ 'PASS' if ligand.admet.lipinski_pass else 'FAIL' }}</b>
+         {% if ligand.admet.lipinski_violations %} ({{ ligand.admet.lipinski_violations }} violation(s)){% endif %}</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h2>Predicted interactions (best pose)</h2>
+      {% if inter %}
+      <table>
+        <tr><th>Type</th><th>Residue</th><th>Distance (Å)</th><th>Detail</th></tr>
+        {% for i in inter %}
+        <tr><td>{{ i.type }}</td><td>{{ i.residue }}</td><td>{{ i.distance_angstrom }}</td><td>{{ i.detail }}</td></tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <p>No significant contacts detected within thresholds.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h2>Output files</h2>
+      <div class="meta">
+        <div><b>Results dir</b>{{ out_dir }}</div>
+        <div><b>Receptor</b>{{ results.receptor.source }}</div>
+        <div><b>Box center</b>{{ box.center }}</div>
+        <div><b>Box size</b>{{ box.size }}</div>
+      </div>
+      <p class="run">Full data is on disk in <code>{{ out_dir }}</code> — <code>results.json</code>, <code>report.md</code>, and per-pose PDB files for viewing in PyMOL/Chimera.</p>
+    </div>
+
+    <p><a class="btn" href="/">← New docking run</a></p>
+  {% else %}
+    <div class="card">
+      <h2>No results yet</h2>
+      <p>Submit a run from the <a href="/">main page</a>.</p>
+    </div>
+  {% endif %}
+</main>
+<footer>Molecular Docking Pipeline · local web interface</footer>
+</body>
+</html>

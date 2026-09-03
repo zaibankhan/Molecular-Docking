@@ -15,6 +15,8 @@
   .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px 26px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
   label { display:block; font-weight:600; margin:14px 0 4px; font-size:14px; }
   input, select { width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
+  input[type="file"] { padding:6px; background:var(--bg); }
+  .err { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:8px; padding:12px 16px; margin:14px 0; font-size:14px; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   .hint { color:var(--muted); font-size:12px; margin-top:3px; }
   button { margin-top:22px; width:100%; padding:13px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; }
@@ -32,14 +34,16 @@
 <main>
   <div class="card">
     {% if has_result %}<span class="badge">A run already completed — see the results page</span>{% endif %}
-    <form method="post" action="/run">
-      <label>Receptor (file path or 4-char PDB ID)</label>
-      <input name="receptor" value="demo/receptor.pdb" placeholder="e.g. 1STP or ./demo/receptor.pdb" required>
-      <div class="hint">Local PDB file path, or an RCSB code like <code>1STP</code>.</div>
+    <form method="post" action="/run" enctype="multipart/form-data">
+      <label>Receptor</label>
+      <div class="hint">Either upload a PDB file <b>or</b> type a path / 4-char PDB ID below (upload wins).</div>
+      <input type="file" name="receptor_file" accept=".pdb,.ent,.pdbqt">
+      <input name="receptor" value="demo/receptor.pdb" placeholder="e.g. 1STP or ./demo/receptor.pdb">
 
-      <label>Ligand (SMILES, file path, or compound name)</label>
-      <input name="ligand" value="C1C2C(C(=O)CCSC(=O)NCCC1)SCCC2C(=O)O" placeholder="SMILES, e.g. OC(=O)c1ccccc1C(=O)O — or aspirin / demo/ligand.sdf" required>
-      <div class="hint">Accepted: SMILES string, an SDF/MOL/PDB path, or a PubChem compound name.</div>
+      <label>Ligand</label>
+      <div class="hint">Upload an SDF/MOL/PDB <b>or</b> type a SMILES / path / compound name (upload wins).</div>
+      <input type="file" name="ligand_file" accept=".sdf,.mol,.pdb,.pdbqt">
+      <input name="ligand" value="C1C2C(C(=O)CCSC(=O)NCCC1)SCCC2C(=O)O" placeholder="SMILES, e.g. OC(=O)c1ccccc1C(=O)O — or aspirin / demo/ligand.sdf">
 
       <div class="grid">
         <div>
@@ -53,9 +57,10 @@
         </div>
       </div>
 
-      <label>Box center from reference file (SDF/PDB/PDBQT)</label>
-      <input name="box_source" placeholder="optional — e.g. demo/pocket_btn.pdb">
-      <div class="hint">Center the box on a cocrystallized ligand / pocket-defining reference.</div>
+      <label>Box center from reference file</label>
+      <div class="hint">Upload an SDF/PDB/PDBQT <b>or</b> give a path above (mutually exclusive with box center).</div>
+      <input type="file" name="box_file" accept=".sdf,.pdb,.pdbqt">
+      <input name="box_source" placeholder="path (optional) — e.g. demo/pocket_btn.pdb">
 
       <div class="grid">
         <div><label>Exhaustiveness</label><input name="exhaustiveness" type="number" value="16" min="1"></div>

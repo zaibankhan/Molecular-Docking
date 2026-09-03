@@ -100,6 +100,7 @@ config.txt        exact Vina invocation (reproducibility)
 ```
 python -m pipeline doctor                          # env check
 python -m pipeline serve [--port 8000]             # local web UI
+python -m pipeline guided                          # interactive guided setup
 python -m pipeline run \
     --receptor <path|PDB_ID> \
     --ligand   <smiles|path|name> \
@@ -109,6 +110,26 @@ python -m pipeline run \
     [--box-center X,Y,Z]   [--box-from FILE]       # box placement
     [--box-size 20,20,20]
 ```
+
+### Interactive guided mode
+
+Run `python -m pipeline guided` to be walked through each input step by step with
+validation and sensible defaults — ideal when you don't remember the flags:
+
+```
+python -m pipeline guided
+Receptor (file path or 4-char PDB ID) [demo/receptor.pdb]:  1STP
+Ligand (SMILES, file path, or compound name):  aspirin
+Box center X,Y,Z (blank to use box source or ligand centroid):
+Box-source file path (blank to skip):
+Box size X,Y,Z [20,20,20]:
+Exhaustiveness [32]:
+...
+```
+
+Every answer is validated as you type, with a clear message and a re-prompt when
+the input is not usable (e.g. a receptor that is neither a file nor a PDB ID, or
+a malformed `X,Y,Z`).
 
 ---
 
@@ -155,6 +176,10 @@ Security & privacy:
 - Do **not** change the bind host to `0.0.0.0` unless you specifically intend
   (and secure) remote access — the interface performs local file operations.
 - `--reload` auto-restarts on code changes (development).
+- **Input** is collected through the form with validation: you can either type a
+  file path / PDB ID / SMILES / compound name, **or upload** a receptor PDB,
+  an SDF/MOL ligand, and a box-reference file directly from the browser. Invalid
+  inputs are rejected with a friendly, helpful message instead of crashing.
 - Web submission writes normal pipeline outputs to `runs/<timestamp>/`; `results.json` and per-pose PDBs are on disk for PyMOL/Chimera.
 - Requires the web extras: `fastapi`, `uvicorn[standard]`, `python-multipart`, `httpx` (install via `pip install -r requirements.txt`).
 
@@ -182,7 +207,8 @@ Passing `--seed` fixes Vina's random number stream; the same input + seed produc
 ```
 ├── PRD.md                 # Product requirements document
 ├── pipeline/              # Python package
-│   ├── cli.py             # doctor / run / serve subcommands
+│   ├── cli.py             # doctor / run / guided / serve subcommands
+│   ├── validate.py        # shared user-input validation (CLI + web)
 │   ├── web/               # FastAPI browser interface (app.py + templates/)
 │   ├── orchestrator.py    # wires the stages together
 │   ├── receptor_prep.py   # PDB → cleaned PDB + PDBQT

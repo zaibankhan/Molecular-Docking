@@ -68,6 +68,12 @@ def build_parser() -> argparse.ArgumentParser:
     _add_box_arg(run_p)
     run_p.add_argument("-v", "--verbose", action="store_true", help="Verbose logging.")
 
+    guide_p = sub.add_parser(
+        "guided",
+        help="Interactive walk-through: answer prompts to run a docking.",
+    )
+    guide_p.add_argument("-v", "--verbose", action="store_true", help="Verbose logging.")
+
     doc_p = sub.add_parser("doctor", help="Check the environment and report detected tooling.")
     doc_p.add_argument("-v", "--verbose", action="store_true")
 
@@ -100,6 +106,120 @@ def _cmd_run(args) -> int:
         box_source=args.box_from,
     )
     from .orchestrator import run
+    results = run(cfg, verbose=args.verbose)
+    best = results.get("docking", {}).get("best_pose")
+    print("\nBest pose affinity:", best["affinity_kcal_mol"], "kcal/mol" if best else "n/a")
+    print("Output:", cfg.resolved_out())
+    return 0
+
+
+def _prompt(text: str, default: str = "") -> str:
+    """Prompt for input with an optional inline default."""
+    if default:
+        return input(f"{text} [{default}]: ").strip() or default
+    return input(f"{text}: ").strip()
+
+
+def _prompt_int(text: str, default: int, minimum: int = 1) -> int:
+    while True:
+        raw = _prompt(text, str(default))
+        try:
+            val = int(raw)
+        except ValueError:
+            print(f"  Please enter a whole number (min {minimum}).")
+            continue
+        if val < minimum:
+            print(f"  Value must be at least {minimum}.")
+            continue
+        return val
+
+
+def _cmd_guided(args) -> int:
+    from . import validate as vld
+    from .utils import configure_logging
+
+    print("=" * 60)
+    print("Molecular Docking Pipeline - guided setup")
+    print("Answer each prompt; press Enter to accept shown defaults.")
+    print("=" * 60)
+
+    # Receptor
+    receptor = _prompt("Receptor (file path or 4-char PDB ID, e.g. '1STP')", "demo/receptor.pdb")
+    while True:
+        try:
+            vld.validate_receptor(receptor)
+            break
+        except vld.InputError as exc:
+            print(f"  {exc}")
+            receptor = _prompt("Receptor (file path or 4-char PDB ID)")
+
+    # Ligand
+    ligand = _prompt(
+        "Ligand (SMILES, file path, or compound name)",
+        "C1C2C(C(=O)CCSC(=O)NCCC1)SCCC2C(=O)O",
+    )
+    while True:
+        try:
+            vld.validate_ligand(ligand)
+            break
+        except vld.InputError as exc:
+            print(f"  {exc}")
+            ligand = _prompt("Ligand (SMILES, file path, or compound name)")
+
+    # Box
+    box_center_text = _prompt("Box center X,Y,Z (blank to use box source or ligand centroid)", "")
+    box_source = _prompt("Box-source file path (blank to skip)", "")
+    while True:
+        try:
+            vld.validate_box(box_center_text, box_source)
+            break
+        except vld.InputError as exc:
+            print(f"  {exc}")
+            box_center_text = _prompt("Box center X,Y,Z", "")
+            box_source = _prompt("Box-source file path", "")
+    box_center = vld.parse_triple(box_center_text, "box center")
+    box_source = box_source.strip() or None
+
+    box_size_text = _prompt("Box size X,Y,Z (angstrom)", "20,20,20")
+    while True:
+        try:
+            size = vld.parse_triple(box_size_text, "box size")
+            if size is None:
+                raise vld.InputError("Box size is required, e.g. '20,20,20'.")
+            break
+        except vld.InputError as exc:
+            print(f"  {exc}")
+            box_size_text = _prompt("Box size X,Y,Z", "20,20,20")
+
+    # Scoring parameters
+    exhaustiveness = _prompt_int("Exhaustiveness", 32)
+    num_modes = _prompt_int("Number of poses to generate", 9)
+    seed = _prompt_int("Random seed", 42)
+    ph = 7.4
+    try:
+        ph_raw = _prompt("Preparation pH", "7.4")
+        ph = float(ph_raw)
+    except ValueError:
+        ph = 7.4
+
+    print()
+    print("Starting docking with the chosen settings...")
+    configure_logging(args.verbose)
+
+    cfg = DockingConfig(
+        receptor=receptor,
+        ligand=ligand,
+        out_dir=None,
+        exhaustiveness=exhaustiveness,
+        num_modes=num_modes,
+        seed=seed,
+        ph=ph,
+        box_center=box_center,
+        box_size=size,
+        box_source=box_source,
+    )
+    from .orchestrator import run
+
     results = run(cfg, verbose=args.verbose)
     best = results.get("docking", {}).get("best_pose")
     print("\nBest pose affinity:", best["affinity_kcal_mol"], "kcal/mol" if best else "n/a")
@@ -157,6 +277,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "run":
         return _cmd_run(args)
+    if args.command == "guided":
+        return _cmd_guided(args)
     if args.command == "doctor":
         return _cmd_doctor(args)
     if args.command == "serve":

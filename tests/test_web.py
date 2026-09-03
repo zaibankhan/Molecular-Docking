@@ -24,3 +24,34 @@ def test_results_empty_when_unknown_dir():
     with TestClient(dapp) as c:
         r = c.get("/results", params={"out": "C:/does/not/exist"})
         assert r.status_code == 200  # graceful "no results" fallback, not a 500
+
+
+def test_run_rejects_invalid_receptor_with_friendly_error():
+    # A receptor that is neither an existing file nor a PDB ID should yield a
+    # friendly error page (400) rather than a crash.
+    with TestClient(dapp) as c:
+        r = c.post(
+            "/run",
+            data={
+                "receptor": "a path that is not a file and is not an id!",
+                "ligand": "OC(=O)c1ccccc1C(=O)O",
+                "box_size": "20,20,20",
+            },
+        )
+        assert r.status_code == 400
+        assert "error" in r.text  # rendered through the friendly results template
+
+
+def test_run_box_conflict_rejected():
+    with TestClient(dapp) as c:
+        r = c.post(
+            "/run",
+            data={
+                "receptor": "demo/receptor.pdb",
+                "ligand": "OC(=O)c1ccccc1C(=O)O",
+                "box_center": "1,2,3",
+                "box_source": "demo/pocket_btn.pdb",
+                "box_size": "20,20,20",
+            },
+        )
+        assert r.status_code == 400

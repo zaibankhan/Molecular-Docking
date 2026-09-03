@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-09-03
+
+### Added
+- **Interactive guided CLI** (`python -m pipeline guided`): a step-by-step
+  walk-through that prompts for receptor, ligand, box geometry, and scoring
+  settings with validation and sensible defaults.
+- **Shared input-validation layer** (`pipeline/validate.py`) reused by both the
+  CLI and the web form for consistent, friendly messages.
+- **Web form file upload**: receptor PDB, ligand SDF/MOL/PDB, and box-reference
+  files can now be uploaded directly in the browser (upload takes precedence
+  over typed paths). Invalid uploads/types and conflicting box inputs are
+  rejected with clear messages.
+
+### Changed
+- Bumped package version to 1.2.0.
+
 ## [1.1.1] - 2026-09-03
 
 ### Changed

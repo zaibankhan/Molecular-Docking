@@ -96,30 +96,16 @@ def add_polar_hydrogens(mol: Chem.Mol, ph: float = 7.4) -> Chem.Mol:
     return Chem.AddHs(mol, addCoords=True)
 
 
-# AutoDock 4 / Vina atom-type inference for common protein elements.
-def _ad4_atom_type(atom: Chem.Atom) -> str:
-    """Return an AutoDock (AD4) atom type for a heavy protein atom."""
+# AutoDock Vina receptor atom types are the element symbols (Vina derives the
+# atom type from the element + local chemistry internally). Unlike AutoDock4,
+# Vina does not use typed names such as 'OA'/'SA' in receptor PDBQT files, so we
+# emit plain element symbols for correctness and reproducibility.
+def _receptor_atom_type(atom: Chem.Atom) -> str:
+    """Return the element-based atom type for a rigid-receptor atom (Vina)."""
     symbol = atom.GetSymbol()
-    if symbol == "C":
-        return "C"
-    if symbol == "N":
-        return "N"
-    if symbol == "O":
-        return "OA"  # oxygen in Vina is typed via hybridization; OA acceptable for protein O
-    if symbol == "S":
-        # Disulfide S vs polar S; default to SA.
-        return "SA"
-    if symbol == "P":
-        return "P"
-    if symbol == "F":
-        return "F"
-    if symbol == "Cl":
-        return "Cl"
-    if symbol == "Br":
-        return "Br"
-    if symbol == "I":
-        return "I"
-    return symbol if len(symbol) <= 2 else "C"
+    if symbol in {"H", "C", "N", "O", "S", "P", "F", "Cl", "Br", "I"}:
+        return symbol
+    return "C"  # unknown/heavy fallback (unusual in standard amino acids)
 
 
 def clean_pdb_to_file(
@@ -209,7 +195,7 @@ def _write_receptor_pdbqt(mol: Chem.Mol, out_pdbqt: Path) -> None:
         serial += 1
         pos = conf.GetAtomPosition(i)
         charge = atom.GetDoubleProp("_GasteigerCharge") if atom.HasProp("_GasteigerCharge") else 0.0
-        atype = _ad4_atom_type(atom)
+        atype = _receptor_atom_type(atom)
         pdbinfo = atom.GetPDBResidueInfo()
         resname = (pdbinfo.GetResidueName().strip() if pdbinfo else "UNK")
         resnum = (pdbinfo.GetResidueNumber() if pdbinfo else i)

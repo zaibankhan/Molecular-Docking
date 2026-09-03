@@ -134,7 +134,7 @@ python -m pipeline run \
 
 ## Web interface (browser-based)
 
-This is a **CLI pipeline** with an optional FastAPI web UI. To run it in your browser on **localhost**:
+This is a **CLI pipeline** with an optional FastAPI web UI. To run it in your browser on **localhost** — accessible **only on your own device**:
 
 ```bash
 python -m pipeline serve --port 8000
@@ -148,10 +148,15 @@ http://localhost:8000        # same
 http://127.0.0.1:8000/docs   # interactive OpenAPI/endpoint docs
 ```
 
-- `--host 127.0.0.1` (default) binds only to your machine; use `--host 0.0.0.0` to allow other devices on your network.
+Security & privacy:
+- The server binds **only to `127.0.0.1` (localhost)** by default and is **not**
+  exposed to your network or the internet. Only programs on this same machine
+  can reach it. This matches the "runs only on my device" use case.
+- Do **not** change the bind host to `0.0.0.0` unless you specifically intend
+  (and secure) remote access — the interface performs local file operations.
 - `--reload` auto-restarts on code changes (development).
 - Web submission writes normal pipeline outputs to `runs/<timestamp>/`; `results.json` and per-pose PDBs are on disk for PyMOL/Chimera.
-- Requires the web extras: `pillow`-free, just `fastapi`, `uvicorn[standard]`, `python-multipart`, `httpx` (install via `pip install -r requirements.txt`).
+- Requires the web extras: `fastapi`, `uvicorn[standard]`, `python-multipart`, `httpx` (install via `pip install -r requirements.txt`).
 
 > Note: the web app runs the same `pipeline` code — the browser is just a convenience front-end over the CLI engine.
 

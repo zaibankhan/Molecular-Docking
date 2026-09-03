@@ -127,7 +127,16 @@ def _cmd_serve(args) -> int:
 
     os.chdir(str(Path(__file__).resolve().parent.parent))
 
+    # Localhost-only by design: this web UI is intended to run on the user's own
+    # device. Refuse to bind to a public/network interface to avoid accidentally
+    # exposing local file operations.
+    _loopback_hosts = {"127.0.0.1", "localhost", "::1"}
     host = args.host
+    if host not in _loopback_hosts:
+        raise SystemExit(
+            f"Refusing to bind to {host!r}. The web interface is localhost-only; "
+            "use 127.0.0.1 (this is intentional for security)."
+        )
     port = args.port
     reload = args.reload
 
@@ -135,6 +144,7 @@ def _cmd_serve(args) -> int:
     print("=" * 60)
     print("Molecular Docking Pipeline - web interface")
     print(f"  Local address:  {url}")
+    print(f"  Runs only on this device (localhost).")
     print(f"  Docs (OpenAPI): {url}/docs")
     print("  Press Ctrl+C to stop.")
     print("=" * 60)

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-09-03
+
+### Changed
+- Receptor PDBQT atom types now written as **element symbols** (`C/N/O/S/P/...`)
+  instead of AutoDock4-style names (`OA`/`SA`). Vina receptor scoring is driven by
+  element + local chemistry, so this is more correct and reproducible.
+- Reports now include a formal **Preparation protocol** section and a clear
+  integrity disclaimer (affinities are estimates for ranking, not measurement).
+
+### Security
+- The web interface is now **localhost-only by design**: binding to a
+  non-loopback host (e.g. `0.0.0.0`) is refused. This matches the intended
+  "runs only on my own device" usage and avoids accidental network exposure of
+  local file operations.
+
 ## [1.1.0] - 2026-09-02
 
 ### Added

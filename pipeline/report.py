@@ -109,6 +109,26 @@ def make_report(
     ]
     L.extend(_format_table(rows))
     L.append("")
+    L.append("**Preparation protocol**")
+    L.append("")
+    proto = [
+        ("Receptor", "Crystal structure cleaned: crystal waters and non-protein "
+                     "hetero residues removed; polar hydrogens added at "
+                     f"pH {receptor_meta.get('ph', '?')}; Gasteiger partial charges; "
+                     "atom types written as element symbols (Vina)."),
+        ("Ligand", "Protonated, assigned 3D coordinates, and a torsion tree built "
+                   "via RDKit + Meeko; written in PDBQT format."),
+        ("Search box", f"center {box_dict.get('center')} Å, "
+                       f"size {box_dict.get('size')} Å ({box_dict.get('description', 'n/a')})."),
+        ("Scoring", f"{cfg.scoring} (AutoDock Vina), exhaustiveness {cfg.exhaustiveness}, "
+                    f"up to {cfg.num_modes} modes, seed {cfg.seed}."),
+    ]
+    L.extend(_format_table(proto))
+    L.append("")
+    L.append("> Affinities are computational estimates from the AutoDock Vina scoring "
+             "function, for relative ranking only. They are not experimental binding "
+             "measurements and must not be treated as safety, efficacy, or toxicity data.")
+    L.append("")
 
     best = docking.best()
     if best:

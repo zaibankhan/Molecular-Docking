@@ -5,76 +5,113 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Molecular Docking Pipeline</title>
 <style>
-  :root { --accent:#2563eb; --bg:#f8fafc; --card:#ffffff; --border:#e2e8f0; --text:#0f172a; --muted:#64748b; }
+  :root { --accent:#2563eb; --bg:#f7f8fa; --card:#ffffff; --border:#dbe1ea; --text:#0f172a; --muted:#64748b; --error:#b91c1c; --errorbg:#fef2f2; }
   * { box-sizing:border-box; }
   body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); margin:0; }
-  header { background:var(--accent); color:#fff; padding:18px 28px; }
-  header h1 { margin:0; font-size:20px; }
-  header p { margin:4px 0 0; font-size:13px; opacity:.85; }
-  main { max-width:860px; margin:28px auto; padding:0 20px; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px 26px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
-  label { display:block; font-weight:600; margin:14px 0 4px; font-size:14px; }
-  input, select { width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
-  input[type="file"] { padding:6px; background:var(--bg); }
-  .err { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:8px; padding:12px 16px; margin:14px 0; font-size:14px; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  header { background:linear-gradient(90deg,#1d4ed8,#2563eb); color:#fff; padding:22px 30px; }
+  header h1 { margin:0; font-size:21px; letter-spacing:.2px; }
+  header p { margin:5px 0 0; font-size:13px; opacity:.92; }
+  main { max-width:860px; margin:28px auto 40px; padding:0 20px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px 28px; box-shadow:0 1px 3px rgba(15,23,42,.06); }
+  .card h2 { margin:0 0 4px; font-size:17px; }
+  .sub { color:var(--muted); font-size:13px; margin:0 0 8px; }
+  label { display:block; font-weight:600; margin:16px 0 5px; font-size:13.5px; }
+  input[type=text], input[type=number] { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:#fff; }
+  input:focus { outline:2px solid var(--accent); outline-offset:-1px; border-color:var(--accent); }
+  input[type=file] { width:100%; padding:8px; border:1px dashed var(--border); border-radius:8px; font-size:13px; background:var(--bg); }
   .hint { color:var(--muted); font-size:12px; margin-top:3px; }
-  button { margin-top:22px; width:100%; padding:13px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; }
-  button:hover { background:#1d4ed8; }
-  .badge { display:inline-block; background:#dcfce7; color:#166534; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; }
-  a { color:var(--accent); }
-  footer { text-align:center; color:var(--muted); font-size:12px; padding:24px 0; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .or-label { font-size:12px; color:var(--muted); margin:6px 0 0; text-align:center; }
+  .errors { background:var(--errorbg); border:1px solid #fecaca; color:var(--error); border-radius:8px; padding:12px 16px; margin:0 0 6px; font-size:13.5px; }
+  .errors ul { margin:4px 0 0 18px; padding:0; }
+  button { margin-top:24px; width:100%; padding:14px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; }
+  button:hover:not(:disabled) { background:#1d4ed8; }
+  button:disabled { opacity:.6; cursor:not-allowed; }
+  .button-row { display:flex; gap:12px; }
+  .button-row button { flex:1; }
+  footer { text-align:center; color:var(--muted); font-size:12px; padding:18px 0 30px; }
+  code { background:#eef1f6; padding:1px 5px; border-radius:4px; font-size:12px; }
+  @media (max-width:600px){ .grid{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
 <header>
   <h1>Molecular Docking Pipeline</h1>
-  <p>AutoDock Vina · receptor + ligand → ranked poses · interactions · report</p>
+  <p>AutoDock Vina · receptor + ligand &rarr; ranked poses · interactions · report</p>
 </header>
 <main>
+  {% if errors %}
+  <div class="errors"><b>Please fix the following:</b>
+    <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  {% if running %}
   <div class="card">
-    {% if has_result %}<span class="badge">A run already completed — see the results page</span>{% endif %}
-    <form method="post" action="/run" enctype="multipart/form-data">
-      <label>Receptor</label>
-      <div class="hint">Either upload a PDB file <b>or</b> type a path / 4-char PDB ID below (upload wins).</div>
-      <input type="file" name="receptor_file" accept=".pdb,.ent,.pdbqt">
-      <input name="receptor" value="demo/receptor.pdb" placeholder="e.g. 1STP or ./demo/receptor.pdb">
+    <h2>A docking run is in progress&hellip;</h2>
+    <p class="sub">This can take a minute or two. You will be taken to the results automatically.</p>
+    <p class="sub"><a href="/results" style="color:var(--accent);">Check progress</a> or wait a moment.</p>
+  </div>
+  {% endif %}
 
-      <label>Ligand</label>
-      <div class="hint">Upload an SDF/MOL/PDB <b>or</b> type a SMILES / path / compound name (upload wins).</div>
-      <input type="file" name="ligand_file" accept=".sdf,.mol,.pdb,.pdbqt">
-      <input name="ligand" value="C1C2C(C(=O)CCSC(=O)NCCC1)SCCC2C(=O)O" placeholder="SMILES, e.g. OC(=O)c1ccccc1C(=O)O — or aspirin / demo/ligand.sdf">
+  <div class="card">
+    <h2>New docking run</h2>
+    <p class="sub">Fill in the receptor and ligand, choose how they are placed, and press <b>Run docking</b>.
+      Everything runs locally on this device.</p>
+
+    <form method="post" action="/submit" enctype="multipart/form-data" id="dockform">
+
+      <label>1 · Receptor</label>
+      <input type="file" name="receptor_file" accept=".pdb,.ent,.pdbqt" title="Upload a PDB file (optional)">
+      <div class="or-label">— or type a file path or 4-character PDB ID —</div>
+      <input type="text" name="receptor" value="{{ prev.receptor if prev else 'demo/receptor.pdb' }}" placeholder="e.g. 1STP or ./demo/receptor.pdb">
+      <div class="hint">Uploading a file takes priority over the text field.</div>
+
+      <label>2 · Ligand</label>
+      <input type="file" name="ligand_file" accept=".sdf,.mol,.pdb,.pdbqt" title="Upload an SDF/MOL/PDB (optional)">
+      <div class="or-label">— or type a SMILES, file path, or compound name —</div>
+      <input type="text" name="ligand" value="{{ prev.ligand if prev else 'C1C2C(C(=O)CCSC(=O)NCCC1)SCCC2C(=O)O' }}" placeholder="SMILES, path, or name e.g. aspirin">
+      <div class="hint">Uploading a file takes priority over the text field.</div>
 
       <div class="grid">
         <div>
-          <label>Search box center (X,Y,Z)</label>
-          <input name="box_center" placeholder="optional — e.g. 11.12,1.68,-10.75">
-          <div class="hint">Leave blank to center on the ligand or set a box source below.</div>
+          <label>3 · Box center (X,Y,Z) — optional</label>
+          <input type="text" name="box_center" value="{{ prev.box_center if prev else '' }}" placeholder="e.g. 11.12,1.68,-10.75">
         </div>
         <div>
-          <label>Box size (X,Y,Z angstrom)</label>
-          <input name="box_size" value="20,20,20">
+          <label>Box size (X,Y,Z, Å)</label>
+          <input type="text" name="box_size" value="{{ prev.box_size if prev else '20,20,20' }}">
         </div>
       </div>
 
-      <label>Box center from reference file</label>
-      <div class="hint">Upload an SDF/PDB/PDBQT <b>or</b> give a path above (mutually exclusive with box center).</div>
-      <input type="file" name="box_file" accept=".sdf,.pdb,.pdbqt">
-      <input name="box_source" placeholder="path (optional) — e.g. demo/pocket_btn.pdb">
+      <label>4 · Box center from a reference file — optional</label>
+      <input type="file" name="box_file" accept=".sdf,.pdb,.pdbqt" title="Center the box on this file">
+      <div class="hint">Centers the search box on a cocrystallized ligand / pocket file. Mutually exclusive with an explicit box center.</div>
 
       <div class="grid">
-        <div><label>Exhaustiveness</label><input name="exhaustiveness" type="number" value="16" min="1"></div>
-        <div><label>Number of poses</label><input name="num_modes" type="number" value="5" min="1"></div>
+        <div><label>Exhaustiveness</label><input type="number" name="exhaustiveness" value="{{ prev.exhaustiveness if prev else 16 }}" min="1"></div>
+        <div><label>Number of poses</label><input type="number" name="num_modes" value="{{ prev.num_modes if prev else 9 }}" min="1"></div>
       </div>
       <div class="grid">
-        <div><label>Seed</label><input name="seed" type="number" value="42"></div>
-        <div><label>pH</label><input name="ph" type="number" step="0.1" value="7.4"></div>
+        <div><label>Seed</label><input type="number" name="seed" value="{{ prev.seed if prev else 42 }}"></div>
+        <div><label>pH</label><input type="number" name="ph" value="{{ prev.ph if prev else 7.4 }}" step="0.1"></div>
       </div>
 
-      <button type="submit">Run docking</button>
+      <button type="submit" id="runbtn">Run docking</button>
     </form>
   </div>
 </main>
-<footer>Molecular Docking Pipeline · local web interface</footer>
+
+<script>
+  (function () {
+    var form = document.getElementById('dockform');
+    var btn = document.getElementById('runbtn');
+    // Show a "running" cue so the user knows submission worked while Vina runs.
+    form.addEventListener('submit', function () {
+      if (btn) { btn.disabled = true; btn.textContent = 'Running docking — please wait…'; }
+    });
+  })();
+</script>
+<footer>Molecular Docking Pipeline · runs locally on your device</footer>
 </body>
 </html>

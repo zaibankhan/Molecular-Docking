@@ -131,7 +131,10 @@ def run_vina(
         "--seed", str(seed),
     ]
     LOG.info("Running Vina: %s", " ".join(cmd))
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+    # NOTE: stdin must be DEVNULL (not inherited). Inheriting an unusable or
+    # open-but-unread stdin is a common cause of Vina hanging when launched from
+    # a server / job context on Windows.
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, stdin=subprocess.DEVNULL)
     stdout = proc.stdout or ""
     stderr = proc.stderr or ""
     LOG.info("Vina exit code: %s", proc.returncode)

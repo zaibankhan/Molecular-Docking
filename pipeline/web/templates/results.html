@@ -5,28 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Docking Results · Molecular Docking Pipeline</title>
 <style>
-  :root { --accent:#2563eb; --bg:#f8fafc; --card:#ffffff; --border:#e2e8f0; --text:#0f172a; --muted:#64748b; }
+  :root { --accent:#2563eb; --bg:#f7f8fa; --card:#ffffff; --border:#dbe1ea; --text:#0f172a; --muted:#64748b; --error:#b91c1c; --errorbg:#fef2f2; }
   * { box-sizing:border-box; }
   body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); margin:0; }
-  header { background:var(--accent); color:#fff; padding:18px 28px; }
-  header h1 { margin:0; font-size:20px; }
-  header p { margin:4px 0 0; font-size:13px; opacity:.85; }
-  a { color:var(--accent); }
-  main { max-width:980px; margin:28px auto; padding:0 20px; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px 24px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  header { background:linear-gradient(90deg,#1d4ed8,#2563eb); color:#fff; padding:22px 30px; }
+  header h1 { margin:0; font-size:21px; }
+  header p { margin:5px 0 0; font-size:13px; opacity:.92; }
+  main { max-width:980px; margin:28px auto 40px; padding:0 20px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px 26px; margin-bottom:20px; box-shadow:0 1px 3px rgba(15,23,42,.06); }
   h2 { margin-top:0; font-size:17px; }
   table { width:100%; border-collapse:collapse; font-size:14px; }
-  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); }
-  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.03em; }
+  th, td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--border); }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
   .top { color:#166534; font-weight:700; }
-  .error { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:8px; padding:14px 16px; }
-  .key { color:var(--muted); }
-  .run { margin-top:16px; }
-  .btn { display:inline-block; background:var(--accent); color:#fff !important; padding:7px 14px; border-radius:6px; text-decoration:none; font-size:14px; }
-  .meta { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; font-size:13px; }
-  .meta div { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; }
-  .meta b { display:block; color:var(--muted); font-weight:600; font-size:11px; }
-  footer { text-align:center; color:var(--muted); font-size:12px; padding:24px 0; }
+  .error { background:var(--errorbg); border:1px solid #fecaca; color:var(--error); border-radius:8px; padding:14px 18px; }
+  .btn { display:inline-block; background:var(--accent); color:#fff !important; padding:9px 16px; border-radius:6px; text-decoration:none; font-size:14px; font-weight:600; }
+  .btn:hover { background:#1d4ed8; }
+  .meta { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px; font-size:13px; margin-top:6px; }
+  .meta div { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:9px 11px; }
+  .meta b { display:block; color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; }
+  .topline { display:flex; align-items:center; gap:10px; }
+  .bigscore { font-size:15px; color:var(--text); }
+  code { background:#eef1f6; padding:1px 5px; border-radius:4px; font-size:12px; }
+  .nohit { color:var(--muted); font-style:italic; }
+  footer { text-align:center; color:var(--muted); font-size:12px; padding:16px 0 30px; }
 </style>
 </head>
 <body>
@@ -36,29 +38,31 @@
 </header>
 <main>
   {% if error %}
-    <div class="error"><b>Run failed:</b> {{ error }}</div>
-  {% endif %}
+    <div class="card error"><b>Run failed:</b> {{ error }}</div>
+    <p><a class="btn" href="/">← Try again</a></p>
+  {% elif results %}
+    {% set dock = results.get('docking') or {} %}
+    {% set ligand = results.get('ligand') or {} %}
+    {% set box = results.get('box') or {} %}
+    {% set inter = results.get('interactions') or [] %}
+    {% set best = dock.get('best_pose') or {} %}
 
-  {% if results %}
-    {% set dock = results.get('docking', {}) %}
-    {% set ligand = results.get('ligand', {}) %}
-    {% set box = results.get('box', {}) %}
-    {% set inter = results.get('interactions', []) %}
-
+    {% if best %}
     <div class="card">
       <h2>Best pose</h2>
-      <table>
-        <tr><th>Pose #</th><td>{{ dock.best_pose.index }}</td></tr>
-        <tr><th>Affinity</th><td class="top">{{ dock.best_pose.affinity_kcal_mol }} kcal/mol</td></tr>
-        <tr><th>Vina</th><td>{{ dock.vina_version }}</td></tr>
-      </table>
+      <div class="topline">
+        <span class="top">{{ best.get('affinity_kcal_mol', '?') }} kcal/mol</span>
+        <span class="bigscore">(pose #{{ best.get('index', '?') }})</span>
+        <span style="margin-left:auto;font-size:12px;color:var(--muted)">{{ dock.get('vina_version','') }}</span>
+      </div>
     </div>
+    {% endif %}
 
     <div class="card">
       <h2>All poses (ranked)</h2>
       <table>
         <tr><th>Pose</th><th>Affinity (kcal/mol)</th><th>RMSD l.b.</th><th>RMSD u.b.</th></tr>
-        {% for p in dock.poses %}
+        {% for p in (dock.get('poses') or []) %}
         <tr class="{{ 'top' if loop.first }}">
           <td>{{ p.index }}</td>
           <td>{{ p.affinity_kcal_mol }}</td>
@@ -67,21 +71,29 @@
         </tr>
         {% endfor %}
       </table>
+      <p style="font-size:12px;color:var(--muted)">Lower (more negative) affinity = stronger predicted binding. These are computational estimates for ranking only.</p>
     </div>
 
+    {% if ligand %}
     <div class="card">
       <h2>Ligand properties</h2>
-      <table>
-        <tr><th>Formula</th><td>{{ ligand.formula }}</td><th>MW</th><td>{{ ligand.mol_weight }} Da</td></tr>
-        <tr><th>Heavy atoms</th><td>{{ ligand.heavy_atoms }}</td><th>Rotatable bonds</th><td>{{ ligand.rotatable_bonds }}</td></tr>
-        <tr><th>H-bond donors</th><td>{{ ligand.hbd }}</td><th>H-bond acceptors</th><td>{{ ligand.hba }}</td></tr>
-        <tr><th>LogP</th><td>{{ ligand.logp }}</td><th>Canonical SMILES</th><td>{{ ligand.canonical_smiles }}</td></tr>
-      </table>
-      {% if ligand.admet %}
-      <p>Lipinski rule of five: <b>{{ 'PASS' if ligand.admet.lipinski_pass else 'FAIL' }}</b>
-         {% if ligand.admet.lipinski_violations %} ({{ ligand.admet.lipinski_violations }} violation(s)){% endif %}</p>
+      <div class="meta">
+        <div><b>Formula</b>{{ ligand.get('formula','—') }}</div>
+        <div><b>MW (Da)</b>{{ ligand.get('mol_weight','—') }}</div>
+        <div><b>Heavy atoms</b>{{ ligand.get('heavy_atoms','—') }}</div>
+        <div><b>Rotatable bonds</b>{{ ligand.get('rotatable_bonds','—') }}</div>
+        <div><b>H-bond donors</b>{{ ligand.get('hbd','—') }}</div>
+        <div><b>H-bond acceptors</b>{{ ligand.get('hba','—') }}</div>
+        <div><b>LogP</b>{{ ligand.get('logp','—') }}</div>
+        <div><b>Canonical SMILES</b>{{ ligand.get('canonical_smiles','—') }}</div>
+      </div>
+      {% if ligand.get('admet') %}
+      <p style="margin-top:12px;font-size:13px">Lipinski rule of five:
+        <b>{{ 'PASS' if ligand.admet.lipinski_pass else 'FAIL' }}</b>
+        {% if ligand.admet.lipinski_violations %}({{ ligand.admet.lipinski_violations }} violation(s)){% endif %}</p>
       {% endif %}
     </div>
+    {% endif %}
 
     <div class="card">
       <h2>Predicted interactions (best pose)</h2>
@@ -93,29 +105,29 @@
         {% endfor %}
       </table>
       {% else %}
-      <p>No significant contacts detected within thresholds.</p>
+      <p class="nohit">No significant contacts detected within the distance thresholds.</p>
       {% endif %}
     </div>
 
     <div class="card">
-      <h2>Output files</h2>
+      <h2>About this run</h2>
       <div class="meta">
-        <div><b>Results dir</b>{{ out_dir }}</div>
-        <div><b>Receptor</b>{{ results.receptor.source }}</div>
-        <div><b>Box center</b>{{ box.center }}</div>
-        <div><b>Box size</b>{{ box.size }}</div>
+        <div><b>Output directory</b><code>{{ out_dir or '—' }}</code></div>
+        <div><b>Receptor</b>{{ results.get('receptor',{}).get('source','—') }}</div>
+        <div><b>Box center (Å)</b>{{ box.get('center',[])|join(', ') }}</div>
+        <div><b>Box size (Å)</b>{{ box.get('size',[])|join(', ') }}</div>
       </div>
-      <p class="run">Full data is on disk in <code>{{ out_dir }}</code> — <code>results.json</code>, <code>report.md</code>, and per-pose PDB files for viewing in PyMOL/Chimera.</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:12px">Full data is on disk in <code>{{ out_dir }}</code> — <code>results.json</code>, <code>report.md</code>, and per-pose PDB files for viewing in PyMOL/Chimera.</p>
     </div>
 
     <p><a class="btn" href="/">← New docking run</a></p>
   {% else %}
     <div class="card">
       <h2>No results yet</h2>
-      <p>Submit a run from the <a href="/">main page</a>.</p>
+      <p>Start a run from the <a href="/">main page</a>.</p>
     </div>
   {% endif %}
 </main>
-<footer>Molecular Docking Pipeline · local web interface</footer>
+<footer>Molecular Docking Pipeline · runs locally on your device</footer>
 </body>
 </html>

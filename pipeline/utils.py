@@ -17,12 +17,16 @@ def _noop(*_a, **_k):
 
 def configure_logging(verbose: bool = False) -> None:
     level = logging.DEBUG if verbose else logging.INFO
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
-    root = logging.getLogger()
-    root.handlers.clear()
-    root.addHandler(handler)
-    root.setLevel(level)
+    pipeline = logging.getLogger("pipeline")
+    # Only attach our console handler once; never destroy handlers that other
+    # frameworks (e.g. uvicorn) have already installed.
+    if not any(getattr(h, "_pipeline_console", False) for h in pipeline.handlers):
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+        handler._pipeline_console = True  # noqa: SLF001
+        pipeline.addHandler(handler)
+    pipeline.setLevel(level)
+    pipeline.propagate = False
     # Quiet noisy third-party loggers.
     for noisy in ("urllib3", "PIL"):
         logging.getLogger(noisy).setLevel(logging.WARNING)

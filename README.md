@@ -150,6 +150,8 @@ python -m pipeline run \
 ```
 
 > Note: this is a pedagogical example. Predicted affinities from this simplified rigid-receptor, neutral-pH prep are for ranking and learning, not a substitute for experimental measurements or production-grade protocols.
+>
+> Do not be surprised that the demo reports a fairly weak absolute score (roughly −3 to −5 kcal/mol) for biotin–streptavidin, whose true affinity approaches picomolar (ΔG ≈ −19 kcal/mol). Energy-only docking under-reproduces ultra-tight binding because it omits the cooperative hydrogen-bond network, conserved crystallographic waters, and solvation effects that dominate this complex. Treat the demo output as a demonstration of the *workflow*, and always judge compounds by their **relative** scores within one run, not by the absolute number.
 
 ---
 

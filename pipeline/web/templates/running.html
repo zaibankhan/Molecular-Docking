@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docking in progress · Molecular Docking Pipeline</title>
+<style>
+  :root { --accent:#2563eb; --bg:#f7f8fa; --card:#ffffff; --border:#dbe1ea; --text:#0f172a; --muted:#64748b; }
+  * { box-sizing:border-box; }
+  body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); margin:0; display:flex; flex-direction:column; min-height:100vh; align-items:center; justify-content:center; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:40px 48px; max-width:520px; text-align:center; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+  .spinner { width:54px; height:54px; border:5px solid #e0e7ff; border-top-color:var(--accent); border-radius:50%; margin:0 auto 18px; animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  h1 { font-size:20px; margin:0 0 6px; }
+  p { color:var(--muted); font-size:14px; margin:6px 0; }
+  .steps { margin-top:18px; text-align:left; font-size:13px; color:var(--muted); }
+  .steps li { margin:4px 0; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="spinner"></div>
+    <h1>Running your docking&hellip;</h1>
+    <p>AutoDock Vina is searching for binding poses on your device. This typically takes under a minute or two.</p>
+    <ul class="steps">
+      <li>1 · preparing the ligand (3D + torsion tree)</li>
+      <li>2 · preparing the receptor</li>
+      <li>3 · placing the search box</li>
+      <li>4 · running AutoDock Vina</li>
+      <li>5 · analyzing interactions &amp; building the report</li>
+    </ul>
+    <p style="margin-top:16px"><a href="/results">Refresh results</a></p>
+  </div>
+  <script>
+    // Auto-reload until the run finishes, so there is no need to click anything.
+    setTimeout(function(){ window.location.href = '/results'; }, 3000);
+  </script>
+</body>
+</html>

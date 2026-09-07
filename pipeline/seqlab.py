@@ -73,10 +73,20 @@ def parse_fasta(text: str) -> list[dict[str, str]]:
 
 
 def is_nucleotide(seq: str) -> bool:
-    sample = [c for c in seq.upper() if c in "ACGTUN"]
-    if not sample:
+    """True when every alphabetic character is a nucleotide (ACGTUN)."""
+    letters = [c for c in seq.upper() if c.isalpha()]
+    if not letters:
         return True
-    return all(c in _DNA_ALPHABET for c in sample)
+    return all(c in _DNA_ALPHABET for c in letters)
+
+
+def database_label(sequences: list[dict[str, str]]) -> str:
+    """A short human label for a sequence set, e.g. '5 protein sequences'."""
+    kinds = {_alphabet_kind([s["seq"]]) for s in sequences if s.get("seq")}
+    kind_name = "nucleotide" if kinds == {"nucleotide"} else (
+        "protein" if kinds == {"protein"} else "mixed")
+    total = sum(len(s.get("seq") or "") for s in sequences)
+    return f"{len(sequences)} {kind_name} sequence(s), {total} letters"
 
 
 def _alphabet_kind(seqs: list[str]) -> str:
@@ -251,8 +261,15 @@ def _runs_of_gap_at_end(row: str) -> int:
 
 
 def blast_search(query: str, database: list[dict[str, str]],
-                 word_size: Optional[int] = None) -> list[BlastHit]:
-    """Local BLAST-style search of `query` against `database` sequences."""
+                 word_size: Optional[int] = None,
+                 require_seed: bool = True) -> list[BlastHit]:
+    """Local BLAST-style search of `query` against `database` sequences.
+
+    ``require_seed`` mirrors BLAST's seeding step: only subjects that share at
+    least one exact k-mer word with the query are scored. When False, every
+    subject is scored with its best local alignment (used as a sensitivity
+    fallback so a query with no shared words still gets a result table).
+    """
     query = query.strip().upper()
     if not query:
         return []
@@ -263,15 +280,16 @@ def blast_search(query: str, database: list[dict[str, str]],
 
     q_positions = _seed_positions(query, k)
     # For candidates, count shared seeds via a rapid scan (no full positional
-    # bookkeeping needed; we rely on the gapped aligner for exact scoring).
+    # bookkeeping needed; we rely on the gapped local aligner for scoring).
     ranked: list[tuple[float, dict[str, str]]] = []
     for entry in db:
         subj = entry["seq"]
         if len(subj) < 2:
             continue
-        shared = sum(1 for mer in _seed_positions(subj, k) if mer in q_positions)
-        if shared == 0:
-            continue
+        if require_seed:
+            shared = sum(1 for mer in _seed_positions(subj, k) if mer in q_positions)
+            if shared == 0:
+                continue
         res = _align_pair(query, subj, kind)
         if res is None or res["raw"] <= 0:
             continue

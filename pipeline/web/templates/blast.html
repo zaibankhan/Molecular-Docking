@@ -39,23 +39,17 @@
 
   <div class="card" style="animation-delay:0s;">
     <h2>BLAST-like local search</h2>
-    <p class="sub">Search an amino-acid or nucleotide query against a database of sequences.
-      Hits are ranked by E-value; identity %, coverage %, bit score and the gapped alignment are shown.
+    <p class="sub">Paste a protein or nucleotide query sequence below (or upload a FASTA file),
+      then click <b>Run BLAST</b>. The matching built-in reference database is picked
+      automatically from the type of sequence you enter. Hits are ranked by E-value;
+      identity %, query-coverage %, bit score and the gapped alignment are shown.
       Everything runs locally on this device.</p>
     <form method="post" action="/blast" enctype="multipart/form-data">
       <label>Query sequence</label>
       <textarea name="query" placeholder="Paste your query sequence, e.g. MVLSPADKTNVKAAWGK...">{{ query or '' }}</textarea>
       <div class="or-label">— or upload a FASTA file —</div>
       <input type="file" name="query_file" accept=".fa,.fasta,.txt">
-      <label>Database</label>
-      <select name="db_type">
-        <option value="protein">Protein (demo: human proteins)</option>
-        <option value="nucleotide">Nucleotide (demo: genes/rRNA)</option>
-      </select>
-      <div class="hint">Or paste your own database below (FASTA format), or upload one.</div>
-      <textarea name="db_text" id="dbtext" placeholder=">my_seq Description&#10;MVLSPADKTNVK..."></textarea>
-      <input type="file" name="db_file" accept=".fa,.fasta,.txt">
-      <button type="submit" class="btn">Run BLAST search</button>
+      <button type="submit" class="btn">Run BLAST</button>
     </form>
   </div>
 
@@ -63,7 +57,12 @@
   <div class="card">
     <h2>Search results</h2>
     <p class="sub"><span class="chip blue">{{ results|length }} hit(s)</span>
-      Database: {{ db_size }} subject sequence(s)</p>
+      <span class="chip green">{{ db_label }}</span>
+      {% if sensitive %}<span class="chip amber">sensitivity mode</span>{% endif %}</p>
+    {% if sensitive %}
+      <p class="sub">No strong hits with the normal seeding step. The closest matches in the
+        reference database are shown below, ranked by their best local alignment.</p>
+    {% endif %}
     {% if results|length == 0 %}
       <p class="sub">No significant hits found.</p>
     {% else %}

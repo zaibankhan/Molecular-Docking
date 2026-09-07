@@ -230,3 +230,25 @@ def test_seqlab_view_unknown_ts_redirects_to_history(monkeypatch, tmp_path):
         r = c.get("/seqlab", params={"ts": "19990101_000000"},
                   follow_redirects=False)
         assert r.status_code == 307
+
+
+def test_blast_page_has_no_database_options():
+    with TestClient(dapp) as c:
+        page = c.get("/blast").text
+        assert 'name="db_text"' not in page
+        assert 'name="db_type"' not in page
+        assert 'name="db_file"' not in page
+        assert 'name="query"' in page
+        assert 'name="query_file"' in page
+
+
+def test_blast_auto_db_and_sensitivity_fallback(monkeypatch, tmp_path):
+    import pipeline.web.app as webapp
+    monkeypatch.setattr(webapp, "_SEQLAB_HISTORY", tmp_path / "hist.json")
+    # A query that shares no k-mer word with the built-in protein database
+    # must still produce a result table (sensitivity fallback).
+    with TestClient(dapp) as c:
+        r = c.post("/blast", data={"query": "WWWWWWWWWWWWWWWWWW"})
+        assert r.status_code == 200
+        assert "sensitivity" in r.text
+        assert "hit(s)" in r.text

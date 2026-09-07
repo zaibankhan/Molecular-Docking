@@ -638,6 +638,8 @@ def seqlab_view(request: Request, ts: str = ""):
                     lines.append(f">{h['subject_id']}\n{seq}")
             return _render(request, "blast.html", results=hits, error=None,
                            query=rec.get("query", ""), db_size=rec.get("db_size", 0),
+                           sensitive=bool(rec.get("sensitive")),
+                           db_label=rec.get("db_label") or f"{len(hits)} saved hit(s)",
                            hits_for_fasta="\n".join(lines),
                            demo_db=seqlab.DEMO_PROTEIN_DB)
         if rec.get("kind") == "msa":
@@ -704,11 +706,20 @@ async def blast_submit(
     elif db_text.strip():
         database = seqlab.parse_fasta(db_text)
     else:
-        database = (seqlab.DEMO_NUCLEOTIDE_DB if db_type == "nucleotide"
+        # No database chosen: automatically use the built-in reference set
+        # that matches the query alphabet (protein or nucleotide).
+        database = (seqlab.DEMO_NUCLEOTIDE_DB if seqlab.is_nucleotide(query_str)
                     else seqlab.DEMO_PROTEIN_DB)
+    db_label = seqlab.database_label(database) if hasattr(seqlab, "database_label") else f"{len(database)} sequence(s)"
 
     try:
         hits = seqlab.blast_search(query_str, database)
+        sensitive = False
+        if not hits:
+            # No shared-word seeds: fall back to scoring every subject so the
+            # page always returns a result table (closest matches, labelled).
+            hits = seqlab.blast_search(query_str, database, require_seed=False)
+            sensitive = True
     except Exception as exc:  # noqa: BLE001
         return _render(request, "blast.html", results=None,
                        error=f"Search failed: {exc}",
@@ -728,8 +739,10 @@ async def blast_submit(
         "kind": "blast",
         "ts": _seq_key(),
         "query": query_str,
-        "db_type": db_type,
+        "db_type": "auto",
         "db_size": len(database),
+        "db_label": db_label,
+        "sensitive": sensitive,
         "hits": [
             {**h.to_dict(), "subject_seq": db_by_id.get(h.subject_id, "")}
             for h in hits[:50]
@@ -737,7 +750,8 @@ async def blast_submit(
     })
 
     return _render(request, "blast.html", results=rendered, error=None,
-                   query=query_str, db_size=len(database),
+                   query=query_str, db_size=len(database), sensitive=sensitive,
+                   db_label=db_label,
                    hits_for_fasta="\n".join(lines),
                    demo_db=seqlab.DEMO_PROTEIN_DB)
 

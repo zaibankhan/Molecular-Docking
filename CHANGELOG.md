@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-09-04
+
+### Added
+- **Sequence Laboratory**: a new set of local (fully offline) bioinformatics
+  tools alongside the docking pipeline, accessible from the web interface's
+  navigation bar and as new CLI subcommands.
+  - **BLAST-like local search** (`/blast`, `pipeline blast`): search a protein
+    or nucleotide query against a sequence database. Candidate hits are seeded
+    by shared k-mers, extended by gapped alignment (BLOSUM62 for proteins),
+    and reported with identity %, coverage %, bit score, E-value and the full
+    gapped alignment. Includes built-in demo protein and nucleotide databases;
+    users can paste or upload their own FASTA.
+  - **Multiple sequence alignment** (`/msa`, `pipeline msa`): progressive MSA
+    with a UPGMA guide tree and sum-of-pairs BLOSUM62 scoring. Output includes
+    a colour-coded alignment view, a per-column conservation track and the
+    guide tree.
+- New module `pipeline/seqlab.py` and unit tests `tests/test_seqlab.py`.
+- JSON APIs at `/api/blast` and `/api/msa` for programmatic access.
+
 ## [1.3.0] - 2026-09-04
 
 ### Changed

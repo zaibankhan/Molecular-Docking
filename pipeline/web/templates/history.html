@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run History · Molecular Docking Pipeline</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="/">
+      <span class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </span>
+      <span>MolDocker</span>
+    </a>
+    <div class="navlinks">
+      <a href="/dock">Docking</a>
+      <a href="/blast">BLAST</a>
+      <a href="/msa">MSA</a>
+      <a href="/history" class="active">History</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <h1>Run History</h1>
+  <p>Everything saved on this device — docking runs, BLAST searches and MSA alignments — newest first.</p>
+</header>
+
+<main>
+  {% if runs|length == 0 and seqlab|length == 0 %}
+  <div class="card" style="animation-delay:0s;">
+    <h2>Nothing saved yet</h2>
+    <p class="sub">Your docking runs will appear here, and so will your BLAST searches
+      and multiple sequence alignments. Start one from the <a href="/">landing page</a>.</p>
+    <a class="btn btn-ghost btn-sm" href="/" style="margin-top:6px;">← Back to tools</a>
+  </div>
+  {% else %}
+  <div class="card" style="animation-delay:0s;">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <h2 style="margin:0;">Saved runs</h2>
+      <span class="chip blue">{{ runs|length }} total</span>
+    </div>
+    <div class="tbl-wrap" style="margin-top:16px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Run</th>
+          <th>Receptor</th>
+          <th>Ligand</th>
+          <th>Formula</th>
+          <th>Affinity (kcal/mol)</th>
+          <th>Poses</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in runs %}
+        <tr>
+          <td>
+            <b>{{ r.run_ts }}</b>
+            <br><span class="chip {{ 'green' if r.report_exists else 'amber' }}">{{ 'report' if r.report_exists else 'partial' }}</span>
+          </td>
+          <td><code style="word-break:break-all;">{{ r.receptor }}</code></td>
+          <td>{{ r.ligand_input }}<br><span style="color:var(--muted);font-size:11px;">{{ r.formula }}</span></td>
+          <td>{{ r.mw }} Da</td>
+          <td><span class="oktext">{{ r.affinity }}</span></td>
+          <td>{{ r.pose_files }}</td>
+          <td>
+            <a class="btn btn-ghost btn-sm" href="/results?out={{ r.out_dir|urlencode }}" style="margin-top:0;">View</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if seqlab|length > 0 %}
+  <div class="card" style="animation-delay:0.05s;">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <h2 style="margin:0;">Sequence laboratory</h2>
+      <span class="chip blue">{{ seqlab|length }} saved</span>
+    </div>
+    <p class="sub">Saved BLAST searches and multiple sequence alignments. Open one and
+      you can still send its hits to the MSA, or BLAST any aligned sequence.</p>
+    <div class="tbl-wrap" style="margin-top:16px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Run</th>
+          <th>Summary</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in seqlab %}
+        <tr>
+          <td>
+            <span class="chip {{ 'green' if s.kind == 'blast' else 'amber' }}">{{ s.label }}</span>
+          </td>
+          <td><b>{{ s.run_ts }}</b></td>
+          <td>{{ s.summary }}</td>
+          <td>
+            <a class="btn btn-ghost btn-sm" href="/seqlab?ts={{ s.detail }}" style="margin-top:0;">View</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+</main>
+
+<footer>Molecular Docking Pipeline · runs locally on your device</footer>
+</body>
+</html>

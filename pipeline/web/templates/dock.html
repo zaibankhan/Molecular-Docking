@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docking · Molecular Docking Pipeline</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="/">
+      <span class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </span>
+      <span>MolDocker</span>
+    </a>
+    <div class="navlinks">
+      <a href="/dock" class="active">Docking</a>
+      <a href="/blast">BLAST</a>
+      <a href="/msa">MSA</a>
+      <a href="/history">History</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <h1>Docking</h1>
+  <p>Prepare a receptor and ligand, run AutoDock Vina, and get ranked poses, interactions and an interpreted report.</p>
+</header>
+
+<main class="wrap">
+  {% if errors %}
+  <div class="errors"><b>Please fix the following:</b>
+    <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  {% if running %}
+  <div class="card" style="animation-delay:0s;">
+    <h3>A docking run is in progress&hellip;</h3>
+    <p class="sub">This can take a minute or two. You'll be taken to the results automatically.</p>
+    <a class="btn btn-ghost btn-sm" href="/results" style="margin-top:0;">Check progress</a>
+  </div>
+  {% endif %}
+
+  <div class="card" style="animation-delay:0s;">
+    <h2>New docking run</h2>
+    <p class="sub">Fill in the receptor and ligand, choose how they're placed, and press <b>Run docking</b>. Everything runs locally on this device.</p>
+    <form method="post" action="/submit" enctype="multipart/form-data" id="dockform">
+      <label>1 · Receptor</label>
+      <input type="text" name="receptor" value="{{ prev.receptor if prev else '' }}" placeholder="4-character PDB ID, e.g. 1STP">
+      <input type="file" name="receptor_file" id="receptor_file" accept=".pdb,.ent,.pdbqt" style="display:none" title="Upload a PDB file (optional)">
+      <div class="button-row" style="margin-top:10px;">
+        <button type="button" class="btn btn-ghost btn-sm" id="uploadpbtn" style="margin-top:0;">Upload PDB file</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="rcsbbtn" style="margin-top:0;">Check PDB ID (RCSB)</button>
+      </div>
+      <div class="hint" id="receptorfilehint">PDB IDs are downloaded from RCSB automatically; a picked file takes priority over the text field.</div>
+      <div class="hint" id="rcsbstatus" style="margin-top:8px;min-height:18px;">Type a PDB ID like "1STP" and click to confirm the structure exists on RCSB.</div>
+
+      <label>2 · Ligand (SMILES)</label>
+      <input type="text" name="ligand" value="{{ prev.ligand if prev else '' }}" placeholder="SMILES, e.g. CC(=O)Oc1ccccc1C(=O)O">
+      <input type="file" name="ligand_file" id="ligand_file" accept=".sdf,.mol,.pdb,.pdbqt,.smi,.txt" style="display:none" title="Upload an SDF/MOL/PDB or a .smi/.txt SMILES file">
+      <div class="button-row" style="margin-top:10px;">
+        <button type="button" class="btn btn-ghost btn-sm" id="uploadlbtn" style="margin-top:0;">Upload ligand file</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="resolvebtn" style="margin-top:0;">Get SMILES from name (PubChem)</button>
+      </div>
+      <div class="hint" id="ligandfilehint">A picked file takes priority over the text field; .smi/.txt files are read as SMILES.</div>
+      <div class="hint" id="resolvestatus" style="margin-top:8px;min-height:18px;">Type a compound name like "aspirin" and click to fetch its SMILES.</div>
+
+      <div class="grid">
+        <div>
+          <label>3 · Box center (X,Y,Z) — optional</label>
+          <input type="text" name="box_center" value="{{ prev.box_center if prev else '' }}" placeholder="e.g. 11.12,1.68,-10.75">
+        </div>
+        <div>
+          <label>Box size (X,Y,Z, Å)</label>
+          <input type="text" name="box_size" value="{{ prev.box_size if prev else '20,20,20' }}">
+        </div>
+      </div>
+
+      <label>4 · Box center from a reference file — optional</label>
+      <input type="file" name="box_file" accept=".sdf,.pdb,.pdbqt" title="Center the box on this file">
+      <div class="hint">Centers the search box on a cocrystallized ligand / pocket file.</div>
+
+      <div class="grid">
+        <div><label>Exhaustiveness</label><input type="number" name="exhaustiveness" value="{{ prev.exhaustiveness if prev else 16 }}" min="1"></div>
+        <div><label>Number of poses</label><input type="number" name="num_modes" value="{{ prev.num_modes if prev else 9 }}" min="1"></div>
+      </div>
+      <div class="grid">
+        <div><label>Seed</label><input type="number" name="seed" value="{{ prev.seed if prev else 42 }}"></div>
+        <div><label>pH</label><input type="number" name="ph" value="{{ prev.ph if prev else 7.4 }}" step="0.1"></div>
+      </div>
+
+      <button type="submit" class="btn" id="runbtn">Run docking</button>
+    </form>
+  </div>
+</main>
+
+<script>
+  (function () {
+    var form = document.getElementById('dockform');
+    var btn = document.getElementById('runbtn');
+    form.addEventListener('submit', function () {
+      if (btn) { btn.disabled = true; btn.textContent = 'Running docking — please wait…'; }
+    });
+    var rbtn = document.getElementById('resolvebtn');
+    var rstatus = document.getElementById('resolvestatus');
+    if (rbtn) {
+      rbtn.addEventListener('click', function () {
+        var inp = form.querySelector('input[name="ligand"]');
+        var v = (inp.value || '').trim();
+        if (!v) { rstatus.textContent = 'Type a compound name or SMILES first.'; return; }
+        rstatus.textContent = 'Looking up "' + v + '" on PubChem…';
+        fetch('/api/resolve_ligand?text=' + encodeURIComponent(v))
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.ok) {
+              if (d.action === 'resolved') {
+                inp.value = d.smiles;
+                rstatus.textContent = 'Resolved "' + d.name + '" → ' + d.smiles;
+              } else {
+                rstatus.textContent = 'That input is already a valid SMILES or file path.';
+              }
+            } else {
+              rstatus.textContent = d.error;
+            }
+          })
+          .catch(function (e) { rstatus.textContent = 'API call failed: ' + e; });
+      });
+    }
+    var pbtn = document.getElementById('rcsbbtn');
+    var pstatus = document.getElementById('rcsbstatus');
+    if (pbtn) {
+      pbtn.addEventListener('click', function () {
+        var inp = form.querySelector('input[name="receptor"]');
+        var v = ((inp.value || '').trim()).toUpperCase();
+        if (!/^[A-Z0-9]{4}$/.test(v) || /\\.(pdb|PDB)$/.test(v)) {
+          pstatus.textContent = 'Enter a valid 4-character PDB ID, e.g. 1STP.';
+          return;
+        }
+        pstatus.textContent = 'Checking "' + v + '" on RCSB…';
+        fetch('/api/resolve_receptor?pdb=' + encodeURIComponent(v))
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.ok) {
+              var part = '— ' + (d.title || 'no title');
+              var res = d.resolution;
+              if (Array.isArray(res)) { res = res[0]; }
+              if (typeof res === 'number') { part += ' · ' + res.toFixed(2) + ' Å'; }
+              if (d.method) { part += ' · ' + d.method; }
+              pstatus.textContent = 'PDB ' + d.pdb_id + ' found on RCSB: ' + part;
+            } else {
+              pstatus.textContent = d.error;
+            }
+          })
+          .catch(function (e) { pstatus.textContent = 'API call failed: ' + e; });
+      });
+    }
+    var upbtn = document.getElementById('uploadpbtn');
+    var rfile = document.getElementById('receptor_file');
+    var fhint = document.getElementById('receptorfilehint');
+    if (upbtn) {
+      upbtn.addEventListener('click', function () { if (rfile) { rfile.click(); } });
+    }
+    if (rfile) {
+      rfile.addEventListener('change', function () {
+        if (rfile.files && rfile.files.length) {
+          fhint.textContent = 'Selected file: ' + rfile.files[0].name + ' (used as the receptor).';
+        } else {
+          fhint.textContent = 'PDB IDs are downloaded from RCSB automatically; a picked file takes priority over the text field.';
+        }
+      });
+    }
+    var upbtn2 = document.getElementById('uploadlbtn');
+    var lfile = document.getElementById('ligand_file');
+    var lhint = document.getElementById('ligandfilehint');
+    if (upbtn2) {
+      upbtn2.addEventListener('click', function () { if (lfile) { lfile.click(); } });
+    }
+    if (lfile) {
+      lfile.addEventListener('change', function () {
+        if (lfile.files && lfile.files.length) {
+          lhint.textContent = 'Selected file: ' + lfile.files[0].name + ' (used as the ligand).';
+        } else {
+          lhint.textContent = 'A picked file takes priority over the text field; .smi/.txt files are read as SMILES.';
+        }
+      });
+    }
+  })();
+</script>
+<footer>Molecular Docking Pipeline · runs locally on your device</footer>
+</body>
+</html>

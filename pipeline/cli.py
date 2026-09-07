@@ -85,6 +85,17 @@ def build_parser() -> argparse.ArgumentParser:
     serve_p.add_argument("--port", type=int, default=8000, help="Port (default 8000).")
     serve_p.add_argument("--reload", action="store_true", help="Auto-reload on code changes.")
 
+    blast_p = sub.add_parser("blast", help="Local BLAST-style sequence search (fully offline).")
+    blast_p.add_argument("--query", required=True, help="Query sequence (or FASTA).")
+    blast_p.add_argument("--db", default="", help="Database sequences in FASTA format. "
+                                                   "Empty uses the built-in demo database.")
+    blast_p.add_argument("--db-type", choices=["protein", "nucleotide"], default="protein")
+    blast_p.add_argument("--top", type=int, default=10, help="Max hits to report (default 10).")
+
+    msa_p = sub.add_parser("msa", help="Multiple sequence alignment (progressive, offline).")
+    msa_p.add_argument("--sequences", required=True, help="Two or more FASTA sequences.")
+    msa_p.add_argument("--chunk", type=int, default=60, help="Columns per printed block (default 60).")
+
     return parser
 
 
@@ -272,6 +283,66 @@ def _cmd_serve(args) -> int:
     return 0
 
 
+def _cmd_blast(args) -> int:
+    from . import seqlab
+    from .utils import configure_logging
+
+    configure_logging(False)
+    query_entries = seqlab.parse_fasta(args.query)
+    if not query_entries:
+        print("Error: no query sequence found.")
+        return 1
+    query_str = query_entries[0]["seq"]
+    if args.db.strip():
+        database = seqlab.parse_fasta(args.db)
+    elif args.db_type == "nucleotide":
+        database = seqlab.DEMO_NUCLEOTIDE_DB
+    else:
+        database = seqlab.DEMO_PROTEIN_DB
+
+    hits = seqlab.blast_search(query_str, database)[: args.top]
+    print(f"BLAST-like search: {len(hits)} hit(s) against {len(database)} subject(s)")
+    print(f"  query: {query_str[:40]}")
+    print()
+    for h in hits:
+        flag = " *** significant" if h.e_value < 1e-4 else ""
+        print(f"[{h.rank:>2}] {h.subject_id:<14} E={h.e_value:<10.2g} "
+              f"ident={h.identity_pct:>5.1f}%  cov={h.coverage:>5.1f}%  bit={h.bit_score:>6.1f}{flag}")
+        print(f"      {h.description}")
+    return 0
+
+
+def _cmd_msa(args) -> int:
+    from . import seqlab
+    from .utils import configure_logging
+
+    configure_logging(False)
+    parsed = seqlab.parse_fasta(args.sequences)
+    if len(parsed) < 2:
+        print("Error: provide at least two FASTA sequences.")
+        return 1
+    result = seqlab.align_multiple(parsed)
+    print(f"Multiple sequence alignment: {len(result.sequences)} sequences, {result.columns} columns")
+    print(f"Method: {result.method}")
+    if result.guide_tree:
+        print(f"Guide tree: {result.guide_tree}")
+    print()
+    for s in result.sequences:
+        seq = s["seq"]
+        for start in range(0, result.columns, args.chunk):
+            block = seq[start : start + args.chunk]
+            header = f"{s['id']:<16} {block}"
+            print(header)
+        print()
+    if result.conservation:
+        cons = "".join(
+            "*" if c >= 80 else ("+" if c >= 50 else " ") for c in result.conservation
+        )
+        for start in range(0, result.columns, args.chunk):
+            print(f"{'':<16} {cons[start:start + args.chunk]}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -283,6 +354,10 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_doctor(args)
     if args.command == "serve":
         return _cmd_serve(args)
+    if args.command == "blast":
+        return _cmd_blast(args)
+    if args.command == "msa":
+        return _cmd_msa(args)
     parser.print_help()
     return 2
 

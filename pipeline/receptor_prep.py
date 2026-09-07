@@ -119,6 +119,8 @@ def clean_pdb_to_file(
     file_path, pdb_id = resolve_receptor_source(receptor, cwd)
 
     if file_path is not None:
+        if file_path.stat().st_size == 0:
+            raise ReceptorError(f"Receptor file is empty (0 bytes): {file_path}")
         mol = Chem.MolFromPDBFile(str(file_path), removeHs=False, sanitize=True)
         if mol is None:
             raise ReceptorError(f"Could not parse receptor PDB: {file_path}")

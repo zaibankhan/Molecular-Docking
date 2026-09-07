@@ -6,6 +6,7 @@ import logging
 import sys
 from pathlib import Path
 from typing import Optional
+from urllib.error import HTTPError
 from urllib.request import urlopen, Request
 
 LOG = logging.getLogger("pipeline")
@@ -73,7 +74,10 @@ def fetch_pdb(pdb_id: str, out_path: Path) -> Path:
     pdb_id = pdb_id.strip().upper()
     url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
     LOG.info("Fetching PDB %s from RCSB...", pdb_id)
-    text = fetch_url_text(url)
+    try:
+        text = fetch_url_text(url)
+    except HTTPError as exc:
+        raise RuntimeError(f"RCSB returned no structure for PDB id '{pdb_id}'") from exc
     if "HEADER" not in text and "ATOM" not in text and "CRYST1" not in text:
         raise RuntimeError(f"RCSB returned no structure for PDB id '{pdb_id}'")
     out_path.write_text(text, encoding="utf-8")
@@ -81,19 +85,68 @@ def fetch_pdb(pdb_id: str, out_path: Path) -> Path:
     return out_path
 
 
-def fetch_pubchem_smiles(name: str, timeout: float = 60.0) -> str:
-    """Look up a compound name via PubChem PUG and return an isomeric SMILES."""
+def fetch_rcsb_entry(pdb_id: str, timeout: float = 60.0) -> dict:
+    """Fetch metadata for a RCSB PDB entry via the data API.
+
+    Returns a dict (pdb_id, title, resolution, method, deposit_date) and
+    raises RuntimeError if the entry does not exist or the call fails.
+    """
+    import json
+
+    pdb_id = pdb_id.strip().upper()
+    url = f"https://data.rcsb.org/rest/v1/core/entry/{pdb_id}"
+    LOG.info("Fetching RCSB entry %s...", pdb_id)
+    try:
+        text = fetch_url_text(url, timeout=timeout)
+    except HTTPError as exc:
+        raise RuntimeError(f"RCSB has no entry for PDB id '{pdb_id}'") from exc
+    payload = json.loads(text)
+    if isinstance(payload, dict) and payload.get("status") == 404:
+        raise RuntimeError(f"RCSB has no entry for PDB id '{pdb_id}'")
+    methods = sorted({e.get("method", "") for e in payload.get("exptl", []) if e.get("method")})
+    resolution = (payload.get("rcsb_entry_info") or {}).get("resolution_combined")
+    if isinstance(resolution, list):
+        resolution = resolution[0] if resolution else None
+    return {
+        "pdb_id": pdb_id,
+        "title": (payload.get("struct") or {}).get("title"),
+        "resolution": resolution,
+        "method": "; ".join(methods) or None,
+        "deposit_date": (payload.get("rcsb_accession_info") or {}).get("deposit_date"),
+    }
+
+
+def fetch_pubchem_record(name: str, timeout: float = 60.0) -> dict:
+    """Resolve a compound name via PubChem PUG and return its properties.
+
+    Returns a dict with keys: cid, smiles, formula, molecular_weight, iupac_name.
+    """
     from urllib.parse import quote
 
     safe = quote(name)
-    url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{safe}/property/CanonicalSMILES/JSON"
+    props = "IsomericSMILES,MolecularFormula,MolecularWeight,IUPACName"
+    url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{safe}/property/{props}/JSON"
     LOG.info("Looking up compound '%s' on PubChem...", name)
     import json
 
     text = fetch_url_text(url, timeout=timeout)
     payload = json.loads(text)
     try:
-        smiles = payload["PropertyTable"]["Properties"][0]["CanonicalSMILES"]
+        row = payload["PropertyTable"]["Properties"][0]
     except (KeyError, IndexError, TypeError) as exc:
         raise RuntimeError(f"Could not resolve compound name '{name}' on PubChem") from exc
-    return smiles
+    smiles = row.get("IsomericSMILES") or row.get("SMILES")
+    if not smiles:
+        raise RuntimeError(f"PubChem returned no SMILES for compound name '{name}'")
+    return {
+        "cid": row.get("CID"),
+        "smiles": smiles,
+        "formula": row.get("MolecularFormula"),
+        "molecular_weight": row.get("MolecularWeight"),
+        "iupac_name": row.get("IUPACName"),
+    }
+
+
+def fetch_pubchem_smiles(name: str, timeout: float = 60.0) -> str:
+    """Look up a compound name via PubChem PUG and return an isomeric SMILES."""
+    return fetch_pubchem_record(name, timeout=timeout)["smiles"]

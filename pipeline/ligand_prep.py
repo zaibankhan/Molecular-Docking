@@ -36,6 +36,10 @@ def resolve_input(ligand: str, cwd: Optional[Path] = None) -> tuple[Optional[Pat
     as_path = Path(ligand)
     if as_path.exists() and as_path.suffix.lower() in (".sdf", ".mol", ".pdb"):
         return as_path, ""
+    if as_path.exists() and as_path.suffix.lower() in (".smi", ".txt"):
+        payload = as_path.read_text(encoding="utf-8", errors="replace")
+        first = next((ln.strip() for ln in payload.splitlines() if ln.strip()), "")
+        return None, first.split()[0] if first else ""
 
     mol = Chem.MolFromSmiles(ligand.strip())
     if mol is not None:
@@ -86,6 +90,8 @@ def prepare_ligand(
     file_path, smiles = resolve_input(ligand_input, cwd)
 
     if file_path is not None:
+        if file_path.stat().st_size == 0:
+            raise PrepError(f"Ligand file is empty (0 bytes): {file_path}")
         if file_path.suffix.lower() == ".sdf":
             supplier = Chem.SDMolSupplier(str(file_path), removeHs=False, sanitize=True)
             mol = next((m for m in supplier if m is not None), None)

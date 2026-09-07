@@ -5,4 +5,4 @@ producing a ranked pose list, interaction map, ADMET-lite filter and an
 interpreted report.
 """
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"

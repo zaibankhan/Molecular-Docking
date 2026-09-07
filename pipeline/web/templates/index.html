@@ -4,114 +4,80 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Molecular Docking Pipeline</title>
-<style>
-  :root { --accent:#2563eb; --bg:#f7f8fa; --card:#ffffff; --border:#dbe1ea; --text:#0f172a; --muted:#64748b; --error:#b91c1c; --errorbg:#fef2f2; }
-  * { box-sizing:border-box; }
-  body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); margin:0; }
-  header { background:linear-gradient(90deg,#1d4ed8,#2563eb); color:#fff; padding:22px 30px; }
-  header h1 { margin:0; font-size:21px; letter-spacing:.2px; }
-  header p { margin:5px 0 0; font-size:13px; opacity:.92; }
-  main { max-width:860px; margin:28px auto 40px; padding:0 20px; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px 28px; box-shadow:0 1px 3px rgba(15,23,42,.06); }
-  .card h2 { margin:0 0 4px; font-size:17px; }
-  .sub { color:var(--muted); font-size:13px; margin:0 0 8px; }
-  label { display:block; font-weight:600; margin:16px 0 5px; font-size:13.5px; }
-  input[type=text], input[type=number] { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:#fff; }
-  input:focus { outline:2px solid var(--accent); outline-offset:-1px; border-color:var(--accent); }
-  input[type=file] { width:100%; padding:8px; border:1px dashed var(--border); border-radius:8px; font-size:13px; background:var(--bg); }
-  .hint { color:var(--muted); font-size:12px; margin-top:3px; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-  .or-label { font-size:12px; color:var(--muted); margin:6px 0 0; text-align:center; }
-  .errors { background:var(--errorbg); border:1px solid #fecaca; color:var(--error); border-radius:8px; padding:12px 16px; margin:0 0 6px; font-size:13.5px; }
-  .errors ul { margin:4px 0 0 18px; padding:0; }
-  button { margin-top:24px; width:100%; padding:14px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; }
-  button:hover:not(:disabled) { background:#1d4ed8; }
-  button:disabled { opacity:.6; cursor:not-allowed; }
-  .button-row { display:flex; gap:12px; }
-  .button-row button { flex:1; }
-  footer { text-align:center; color:var(--muted); font-size:12px; padding:18px 0 30px; }
-  code { background:#eef1f6; padding:1px 5px; border-radius:4px; font-size:12px; }
-  @media (max-width:600px){ .grid{grid-template-columns:1fr;} }
-</style>
+<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<header>
-  <h1>Molecular Docking Pipeline</h1>
-  <p>AutoDock Vina · receptor + ligand &rarr; ranked poses · interactions · report</p>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="/">
+      <span class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </span>
+      <span>MolDocker</span>
+    </a>
+    <div class="navlinks">
+      <a href="/dock">Docking</a>
+      <a href="/blast">BLAST</a>
+      <a href="/msa">MSA</a>
+      <a href="/history">History</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <h1>Molecular Docking <span style="background:linear-gradient(90deg,#bae6fd,#c7d2fe);-webkit-background-clip:text;background-clip:text;color:transparent;">Pipeline</span></h1>
+  <p class="lead">Receptor + ligand &rarr; AutoDock Vina &rarr; ranked poses, interactions &amp; an interpreted report — all running privately on your device.</p>
 </header>
+
 <main>
-  {% if errors %}
-  <div class="errors"><b>Please fix the following:</b>
-    <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
-  </div>
-  {% endif %}
-
   {% if running %}
-  <div class="card">
-    <h2>A docking run is in progress&hellip;</h2>
-    <p class="sub">This can take a minute or two. You will be taken to the results automatically.</p>
-    <p class="sub"><a href="/results" style="color:var(--accent);">Check progress</a> or wait a moment.</p>
+  <div class="card" style="animation-delay:0s;">
+    <h3>A docking run is in progress&hellip;</h3>
+    <p class="sub">This can take a minute or two. You'll be taken to the results automatically.</p>
+    <a class="btn btn-ghost btn-sm" href="/results" style="margin-top:0;">Check progress</a>
   </div>
   {% endif %}
 
-  <div class="card">
-    <h2>New docking run</h2>
-    <p class="sub">Fill in the receptor and ligand, choose how they are placed, and press <b>Run docking</b>.
-      Everything runs locally on this device.</p>
-
-    <form method="post" action="/submit" enctype="multipart/form-data" id="dockform">
-
-      <label>1 · Receptor</label>
-      <input type="file" name="receptor_file" accept=".pdb,.ent,.pdbqt" title="Upload a PDB file (optional)">
-      <div class="or-label">— or type a file path or 4-character PDB ID —</div>
-      <input type="text" name="receptor" value="{{ prev.receptor if prev else 'demo/receptor.pdb' }}" placeholder="e.g. 1STP or ./demo/receptor.pdb">
-      <div class="hint">Uploading a file takes priority over the text field.</div>
-
-      <label>2 · Ligand</label>
-      <input type="file" name="ligand_file" accept=".sdf,.mol,.pdb,.pdbqt" title="Upload an SDF/MOL/PDB (optional)">
-      <div class="or-label">— or type a SMILES, file path, or compound name —</div>
-      <input type="text" name="ligand" value="{{ prev.ligand if prev else 'C1C2C(C(=O)CCSC(=O)NCCC1)SCCC2C(=O)O' }}" placeholder="SMILES, path, or name e.g. aspirin">
-      <div class="hint">Uploading a file takes priority over the text field.</div>
-
-      <div class="grid">
-        <div>
-          <label>3 · Box center (X,Y,Z) — optional</label>
-          <input type="text" name="box_center" value="{{ prev.box_center if prev else '' }}" placeholder="e.g. 11.12,1.68,-10.75">
-        </div>
-        <div>
-          <label>Box size (X,Y,Z, Å)</label>
-          <input type="text" name="box_size" value="{{ prev.box_size if prev else '20,20,20' }}">
-        </div>
-      </div>
-
-      <label>4 · Box center from a reference file — optional</label>
-      <input type="file" name="box_file" accept=".sdf,.pdb,.pdbqt" title="Center the box on this file">
-      <div class="hint">Centers the search box on a cocrystallized ligand / pocket file. Mutually exclusive with an explicit box center.</div>
-
-      <div class="grid">
-        <div><label>Exhaustiveness</label><input type="number" name="exhaustiveness" value="{{ prev.exhaustiveness if prev else 16 }}" min="1"></div>
-        <div><label>Number of poses</label><input type="number" name="num_modes" value="{{ prev.num_modes if prev else 9 }}" min="1"></div>
-      </div>
-      <div class="grid">
-        <div><label>Seed</label><input type="number" name="seed" value="{{ prev.seed if prev else 42 }}"></div>
-        <div><label>pH</label><input type="number" name="ph" value="{{ prev.ph if prev else 7.4 }}" step="0.1"></div>
-      </div>
-
-      <button type="submit" id="runbtn">Run docking</button>
-    </form>
+  <div class="topbar"><h2>Choose a tool</h2></div>
+  <div class="features">
+    <a class="feature" href="/dock">
+      <span class="icon" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </span>
+      <h3>Docking</h3>
+      <p>Prepare a receptor and ligand, run AutoDock Vina, and get ranked poses and predicted interactions.</p>
+      <span class="go">Open docking &rarr;</span>
+    </a>
+    <a class="feature" href="/blast">
+      <span class="icon" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#be185d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M7 14 10 8l3 4 4-7"/></svg>
+      </span>
+      <h3>BLAST</h3>
+      <p>Search a protein or nucleotide query against a sequence database with E-values and alignments.</p>
+      <span class="go">Open BLAST &rarr;</span>
+    </a>
+    <a class="feature" href="/msa">
+      <span class="icon" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M3 12h18M3 19h8"/><circle cx="19" cy="19" r="2"/></svg>
+      </span>
+      <h3>MSA</h3>
+      <p>Multiple sequence alignment with a guide tree, colour-coded rows and a conservation track.</p>
+      <span class="go">Open alignment &rarr;</span>
+    </a>
+    <a class="feature" href="/history">
+      <span class="icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      </span>
+      <h3>History</h3>
+      <p>Browse every docking run saved on this device, with affinities, ligands and reports.</p>
+      <span class="go">Open history &rarr;</span>
+    </a>
   </div>
 </main>
 
-<script>
-  (function () {
-    var form = document.getElementById('dockform');
-    var btn = document.getElementById('runbtn');
-    // Show a "running" cue so the user knows submission worked while Vina runs.
-    form.addEventListener('submit', function () {
-      if (btn) { btn.disabled = true; btn.textContent = 'Running docking — please wait…'; }
-    });
-  })();
-</script>
 <footer>Molecular Docking Pipeline · runs locally on your device</footer>
 </body>
 </html>

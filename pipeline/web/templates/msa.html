@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multiple Sequence Alignment · Seqlab</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="/">
+      <span class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </span>
+      <span>MolDocker</span>
+    </a>
+    <div class="navlinks">
+      <a href="/dock">Docking</a>
+      <a href="/blast">BLAST</a>
+      <a href="/msa" class="active">MSA</a>
+      <a href="/history">History</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <h1>Sequence Laboratory</h1>
+  <p>Local BLAST search &middot; Multiple sequence alignment &middot; fully offline</p>
+</header>
+
+<main class="wrap">
+  {% if error %}
+  <div class="errors"><b>Error:</b> {{ error }}</div>
+  {% endif %}
+
+  <div class="card" style="animation-delay:0s;">
+    <h2>Multiple sequence alignment</h2>
+    <p class="sub">Align two or more protein or DNA sequences with a progressive
+      (UPGMA guide-tree) algorithm. Paste FASTA below or use the demo sequences.</p>
+    <form method="post" action="/msa" enctype="multipart/form-data">
+      <label>Sequences (FASTA)</label>
+      <textarea name="sequences">{{ demo }}</textarea>
+      <div class="hint">Each entry starts with <code>&gt;id</code>, followed by the sequence. Paste as many as you like.</div>
+      <label style="margin-top:12px;">— or upload a FASTA file —</label>
+      <input type="file" name="seq_file" accept=".fa,.fasta,.txt,.aln">
+      <button type="submit" class="btn">Align sequences</button>
+    </form>
+  </div>
+
+  {% if results is not none %}
+  <div class="card">
+    <h2>Alignment</h2>
+    <p class="sub">
+      <span class="chip blue">{{ results.sequences|length }} sequences</span>
+      <span class="chip green">{{ results.columns }} columns</span>
+      <span class="chip amber">{{ results.method }}</span>
+    </p>
+    {% if results.guide_tree %}
+    <p class="sub" style="font-family:ui-monospace,Consolas,monospace;">Guide tree: {{ results.guide_tree }}</p>
+    {% endif %}
+
+    {% set rows = results.sequences %}
+    {% set cons = results.conservation %}
+    {% for start in range(0, results.columns, 60) %}
+    <div class="legend">Columns {{ start + 1 }} – {{ ws_min(start + 60, results.columns) }}</div>
+    <div class="aln">
+      <table>
+        {% for s in rows %}
+        {% set seq = s.aligned %}
+        <tr>
+          <td class="hdr">{{ s.id }}</td>
+          {% for k in range(start, ws_min(start + 60, results.columns)) %}
+            {% set ch = seq[k] %}
+            <td class="res {% if ch == '-' %}pos-gap{% endif %}" style="color:{{ color(ch) }}">{% if ch != '-' %}{{ ch }}{% else %}&middot;{% endif %}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+        <tr>
+          <td class="hdr">Cons.</td>
+          {% for k in range(start, ws_min(start + 60, results.columns)) %}
+          <td style="background:rgba(37,99,235,{{ (cons[k] / 100.0) * 0.9 }}); width:13px;">&nbsp;</td>
+          {% endfor %}
+        </tr>
+      </table>
+    </div>
+    {% endfor %}
+    <div class="card" style="animation-delay:0.05s;margin-top:20px;">
+      <h2>MSA &rarr; BLAST</h2>
+      <p class="sub">Take any aligned sequence and run it as a query against a <a href="/blast">BLAST</a> database.
+        Gaps are removed from the copy sent to the search.</p>
+      <div class="tbl-wrap">
+      <table>
+        <tr><th>Sequence</th><th>Length</th><th></th></tr>
+        {% for s in rows %}
+        <tr>
+          <td><b>{{ s.id }}</b></td>
+          <td>{{ s.aligned | replace('-', '') | length }}</td>
+          <td style="text-align:right;">
+            <form method="post" action="/blast">
+              <textarea name="query" class="sr-only">{{ s.aligned | replace('-', '') }}</textarea>
+              <button type="submit" class="btn btn-sm">Run BLAST</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      </div>
+    </div>
+    <div class="legend">Colored residues (Clustal-style): <b style="color:#0057ae">blue</b> hydrophobic/A/W/F,
+      <b style="color:#00b000">green</b> G/S/T/Y/C, <b style="color:#e00000">red</b> polar/+/-,
+      <b style="color:#6f00d0">purple</b> K/R/H, <b style="color:#8f4700">orange</b> P. The <b>Cons.</b> track shows
+      how conserved each column is (darker = fully conserved).</div>
+  </div>
+  {% endif %}
+</main>
+
+<footer>Sequence Laboratory · runs locally on your device</footer>
+</body>
+</html>

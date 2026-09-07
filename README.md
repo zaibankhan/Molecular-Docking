@@ -35,6 +35,17 @@ receptor (PDB file | PDB ID)
 
 The pipeline handles preparation, execution, parsing, and interpretation automatically.
 
+Alongside docking, the web interface and CLI also include a **Sequence Laboratory**
+—— local, fully offline bioinformatics tools:
+- **BLAST** (`/blast`, `python -m pipeline blast`) — search a protein or
+  nucleotide query against a sequence database. Ranked hits with identity %,
+  coverage %, bit score, E-value and the gapped alignment.
+- **MSA** (`/msa`, `python -m pipeline msa`) — progressive multiple sequence
+  alignment with a UPGMA guide tree, colour-coded rows and a conservation track.
+
+Both accept pasted or uploaded FASTA and ship with small demo databases, so they
+work with no network access.
+
 ---
 
 ## Quick start

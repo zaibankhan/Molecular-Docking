@@ -17,9 +17,23 @@ def test_health():
         assert r.json() == {"status": "ok"}
 
 
-def test_index_renders_form():
+def test_index_renders_landing_options():
+    # The landing page shows the tool options, not the docking form.
     with TestClient(dapp) as c:
         r = c.get("/")
+        assert r.status_code == 200
+        assert "Choose a tool" in r.text
+        assert "New docking run" not in r.text
+        assert "/dock" in r.text
+        assert "/blast" in r.text
+        assert "/msa" in r.text
+        assert "/history" in r.text
+
+
+def test_dock_page_renders_form():
+    # The docking form lives on the dedicated /dock page.
+    with TestClient(dapp) as c:
+        r = c.get("/dock")
         assert r.status_code == 200
         assert "New docking run" in r.text
         assert "receptor" in r.text
@@ -152,3 +166,67 @@ def test_submit_valid_launches_run(monkeypatch):
         with _LOCK:
             _STATE.clear()
             _STATE.update(old)
+
+
+HBA = ("MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHGKK"
+       "VADALTNAVAHVDDMPNALSALSDLHAHKLRVDPVNFKLLSHCLLVTLAAHLPAEFTPAVHAS"
+       "LDKFLASVSTVLTSKYR")
+
+
+def test_blast_saves_history_and_links_to_msa(monkeypatch, tmp_path):
+    import pipeline.web.app as webapp
+    monkeypatch.setattr(webapp, "_SEQLAB_HISTORY", tmp_path / "hist.json")
+    with TestClient(dapp) as c:
+        r = c.post("/blast", data={"query": HBA, "db_type": "protein"})
+        assert r.status_code == 200
+        assert "hit(s)" in r.text
+        assert "Align query + top hits" in r.text  # BLAST -> MSA link
+
+        recs = webapp._load_seqlab_history()
+        assert len(recs) == 1
+        assert recs[0]["kind"] == "blast"
+        assert recs[0]["hits"]
+        assert recs[0]["hits"][0]["subject_id"] == "HBA_HUMAN"
+
+        h = c.get("/history")
+        assert h.status_code == 200
+        assert "Sequence laboratory" in h.text
+        assert "BLAST" in h.text
+
+        v = c.get("/seqlab", params={"ts": recs[0]["ts"]})
+        assert v.status_code == 200
+        assert "Align query + top hits" in v.text  # link survives re-viewing
+
+
+def test_msa_saves_history_and_links_to_blast(monkeypatch, tmp_path):
+    import pipeline.web.app as webapp
+    monkeypatch.setattr(webapp, "_SEQLAB_HISTORY", tmp_path / "hist.json")
+    fasta = ">A seq one\nACDEFGHIKLMNPQRSTVWY\n>B seq two\nACDEFGHIKLMNPQRSTVWYC\n"
+    with TestClient(dapp) as c:
+        r = c.post("/msa", data={"sequences": fasta})
+        assert r.status_code == 200
+        assert "columns" in r.text
+        assert "MSA &rarr; BLAST" in r.text  # MSA -> BLAST link
+
+        recs = webapp._load_seqlab_history()
+        assert len(recs) == 1
+        assert recs[0]["kind"] == "msa"
+        assert recs[0]["columns"] > 0
+        assert len(recs[0]["sequences"]) == 2
+
+        h = c.get("/history")
+        assert h.status_code == 200
+        assert "MSA" in h.text
+
+        v = c.get("/seqlab", params={"ts": recs[0]["ts"]})
+        assert v.status_code == 200
+        assert "Run BLAST" in v.text  # link survives re-viewing
+
+
+def test_seqlab_view_unknown_ts_redirects_to_history(monkeypatch, tmp_path):
+    import pipeline.web.app as webapp
+    monkeypatch.setattr(webapp, "_SEQLAB_HISTORY", tmp_path / "hist.json")
+    with TestClient(dapp) as c:
+        r = c.get("/seqlab", params={"ts": "19990101_000000"},
+                  follow_redirects=False)
+        assert r.status_code == 307

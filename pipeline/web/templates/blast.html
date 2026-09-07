@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BLAST Search · Seqlab</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="/">
+      <span class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </span>
+      <span>MolDocker</span>
+    </a>
+    <div class="navlinks">
+      <a href="/dock">Docking</a>
+      <a href="/blast" class="active">BLAST</a>
+      <a href="/msa">MSA</a>
+      <a href="/history">History</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <h1>Sequence Laboratory</h1>
+  <p>Local BLAST search &middot; Multiple sequence alignment &middot; fully offline</p>
+</header>
+
+<main class="wrap">
+  {% if error %}
+  <div class="errors"><b>Error:</b> {{ error }}</div>
+  {% endif %}
+
+  <div class="card" style="animation-delay:0s;">
+    <h2>BLAST-like local search</h2>
+    <p class="sub">Search an amino-acid or nucleotide query against a database of sequences.
+      Hits are ranked by E-value; identity %, coverage %, bit score and the gapped alignment are shown.
+      Everything runs locally on this device.</p>
+    <form method="post" action="/blast" enctype="multipart/form-data">
+      <label>Query sequence</label>
+      <textarea name="query" placeholder="Paste your query sequence, e.g. MVLSPADKTNVKAAWGK...">{{ query or '' }}</textarea>
+      <div class="or-label">— or upload a FASTA file —</div>
+      <input type="file" name="query_file" accept=".fa,.fasta,.txt">
+      <label>Database</label>
+      <select name="db_type">
+        <option value="protein">Protein (demo: human proteins)</option>
+        <option value="nucleotide">Nucleotide (demo: genes/rRNA)</option>
+      </select>
+      <div class="hint">Or paste your own database below (FASTA format), or upload one.</div>
+      <textarea name="db_text" id="dbtext" placeholder=">my_seq Description&#10;MVLSPADKTNVK..."></textarea>
+      <input type="file" name="db_file" accept=".fa,.fasta,.txt">
+      <button type="submit" class="btn">Run BLAST search</button>
+    </form>
+  </div>
+
+  {% if results is not none %}
+  <div class="card">
+    <h2>Search results</h2>
+    <p class="sub"><span class="chip blue">{{ results|length }} hit(s)</span>
+      Database: {{ db_size }} subject sequence(s)</p>
+    {% if results|length == 0 %}
+      <p class="sub">No significant hits found.</p>
+    {% else %}
+    <div class="tbl-wrap">
+    <table>
+      <tr><th>#</th><th>Subject</th><th>E-value</th><th>Bit score</th><th>Identity %</th><th>Coverage %</th></tr>
+      {% for h in results %}
+      <tr>
+        <td>{{ h.rank }}</td>
+        <td><b>{{ h.subject_id }}</b><br><span style="color:var(--muted);font-size:11px;">{{ h.description }}</span></td>
+        <td style="font-weight:700">{% if h.e_value|float < 0.0001 %}<span class="oktext">{{ h.e_value }}</span>{% else %}{{ h.e_value }}{% endif %}</td>
+        <td>{{ h.bit_score }}</td>
+        <td>{{ h.identity_pct }}%</td>
+        <td>{{ h.coverage }}%</td>
+      </tr>
+      <tr><td colspan="6">
+        <pre class="aln">Query    {{ h.query_aln }}
+              {{ h.match_mid }}
+Subject  {{ h.subject_aln }}</pre>
+      </td></tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if results|length > 0 and hits_for_fasta %}
+  <div class="card" style="animation-delay:0.05s;">
+    <h2>Blast results &rarr; MSA</h2>
+    <p class="sub">Send the query together with its top hits to the <a href="/msa">multiple
+      sequence aligner</a> and compare them residue-by-residue.</p>
+    <form method="post" action="/msa">
+      <textarea name="sequences" class="sr-only">{{ hits_for_fasta }}</textarea>
+      <button type="submit" class="btn">Align query + top hits (MSA)</button>
+    </form>
+  </div>
+  {% endif %}
+  {% endif %}
+</main>
+
+<footer>Sequence Laboratory · runs locally on your device</footer>
+</body>
+</html>

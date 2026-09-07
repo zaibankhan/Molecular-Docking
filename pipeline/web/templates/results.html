@@ -4,42 +4,38 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Docking Results · Molecular Docking Pipeline</title>
-<style>
-  :root { --accent:#2563eb; --bg:#f7f8fa; --card:#ffffff; --border:#dbe1ea; --text:#0f172a; --muted:#64748b; --error:#b91c1c; --errorbg:#fef2f2; }
-  * { box-sizing:border-box; }
-  body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); margin:0; }
-  header { background:linear-gradient(90deg,#1d4ed8,#2563eb); color:#fff; padding:22px 30px; }
-  header h1 { margin:0; font-size:21px; }
-  header p { margin:5px 0 0; font-size:13px; opacity:.92; }
-  main { max-width:980px; margin:28px auto 40px; padding:0 20px; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px 26px; margin-bottom:20px; box-shadow:0 1px 3px rgba(15,23,42,.06); }
-  h2 { margin-top:0; font-size:17px; }
-  table { width:100%; border-collapse:collapse; font-size:14px; }
-  th, td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--border); }
-  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
-  .top { color:#166534; font-weight:700; }
-  .error { background:var(--errorbg); border:1px solid #fecaca; color:var(--error); border-radius:8px; padding:14px 18px; }
-  .btn { display:inline-block; background:var(--accent); color:#fff !important; padding:9px 16px; border-radius:6px; text-decoration:none; font-size:14px; font-weight:600; }
-  .btn:hover { background:#1d4ed8; }
-  .meta { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px; font-size:13px; margin-top:6px; }
-  .meta div { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:9px 11px; }
-  .meta b { display:block; color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; }
-  .topline { display:flex; align-items:center; gap:10px; }
-  .bigscore { font-size:15px; color:var(--text); }
-  code { background:#eef1f6; padding:1px 5px; border-radius:4px; font-size:12px; }
-  .nohit { color:var(--muted); font-style:italic; }
-  footer { text-align:center; color:var(--muted); font-size:12px; padding:16px 0 30px; }
-</style>
+<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<header>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="/">
+      <span class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </span>
+      <span>MolDocker</span>
+    </a>
+    <div class="navlinks">
+      <a href="/dock">Docking</a>
+      <a href="/blast">BLAST</a>
+      <a href="/msa">MSA</a>
+      <a href="/history">History</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
   <h1>Docking Results</h1>
-  <p>Molecular Docking Pipeline · AutoDock Vina</p>
+  <p>Molecular Docking Pipeline &middot; AutoDock Vina</p>
 </header>
+
 <main>
   {% if error %}
-    <div class="card error"><b>Run failed:</b> {{ error }}</div>
-    <p><a class="btn" href="/">← Try again</a></p>
+    <div class="card errors" style="animation-delay:0s;"><b>Run failed:</b> {{ error }}</div>
+    <a class="btn btn-ghost btn-sm" href="/">← Try again</a>
   {% elif results %}
     {% set dock = results.get('docking') or {} %}
     {% set ligand = results.get('ligand') or {} %}
@@ -49,9 +45,8 @@
 
     {% if best %}
     <div class="card">
-      <h2>Best pose</h2>
       <div class="topline">
-        <span class="top">{{ best.get('affinity_kcal_mol', '?') }} kcal/mol</span>
+        <span class="chip green" style="font-size:15px;padding:8px 16px;">{{ best.get('affinity_kcal_mol', '?') }} kcal/mol</span>
         <span class="bigscore">(pose #{{ best.get('index', '?') }})</span>
         <span style="margin-left:auto;font-size:12px;color:var(--muted)">{{ dock.get('vina_version','') }}</span>
       </div>
@@ -60,8 +55,10 @@
 
     <div class="card">
       <h2>All poses (ranked)</h2>
+      <div class="tbl-wrap">
       <table>
-        <tr><th>Pose</th><th>Affinity (kcal/mol)</th><th>RMSD l.b.</th><th>RMSD u.b.</th></tr>
+        <thead><tr><th>Pose</th><th>Affinity (kcal/mol)</th><th>RMSD l.b.</th><th>RMSD u.b.</th></tr></thead>
+        <tbody>
         {% for p in (dock.get('poses') or []) %}
         <tr class="{{ 'top' if loop.first }}">
           <td>{{ p.index }}</td>
@@ -70,8 +67,10 @@
           <td>{{ p.rmsd_upper_bound }}</td>
         </tr>
         {% endfor %}
+        </tbody>
       </table>
-      <p style="font-size:12px;color:var(--muted)">Lower (more negative) affinity = stronger predicted binding. These are computational estimates for ranking only.</p>
+      </div>
+      <p class="sub" style="margin-top:10px;">Lower (more negative) affinity = stronger predicted binding. These are computational estimates for ranking only.</p>
     </div>
 
     {% if ligand %}
@@ -85,12 +84,13 @@
         <div><b>H-bond donors</b>{{ ligand.get('hbd','—') }}</div>
         <div><b>H-bond acceptors</b>{{ ligand.get('hba','—') }}</div>
         <div><b>LogP</b>{{ ligand.get('logp','—') }}</div>
-        <div><b>Canonical SMILES</b>{{ ligand.get('canonical_smiles','—') }}</div>
+        <div><b>Canonical SMILES</b><code style="font-size:12px;">{{ ligand.get('canonical_smiles','—') }}</code></div>
       </div>
       {% if ligand.get('admet') %}
-      <p style="margin-top:12px;font-size:13px">Lipinski rule of five:
-        <b>{{ 'PASS' if ligand.admet.lipinski_pass else 'FAIL' }}</b>
-        {% if ligand.admet.lipinski_violations %}({{ ligand.admet.lipinski_violations }} violation(s)){% endif %}</p>
+      <div style="margin-top:14px;font-size:13px">Lipinski rule of five:
+        <span class="chip {{ 'green' if ligand.admet.lipinski_pass else 'amber' }}">{{ 'PASS' if ligand.admet.lipinski_pass else 'FAIL' }}</span>
+        {% if ligand.admet.lipinski_violations %}({{ ligand.admet.lipinski_violations }} violation(s)){% endif %}
+      </div>
       {% endif %}
     </div>
     {% endif %}
@@ -98,14 +98,18 @@
     <div class="card">
       <h2>Predicted interactions (best pose)</h2>
       {% if inter %}
+      <div class="tbl-wrap">
       <table>
-        <tr><th>Type</th><th>Residue</th><th>Distance (Å)</th><th>Detail</th></tr>
+        <thead><tr><th>Type</th><th>Residue</th><th>Distance (Å)</th><th>Detail</th></tr></thead>
+        <tbody>
         {% for i in inter %}
-        <tr><td>{{ i.type }}</td><td>{{ i.residue }}</td><td>{{ i.distance_angstrom }}</td><td>{{ i.detail }}</td></tr>
+        <tr><td><span class="chip blue">{{ i.type }}</span></td><td>{{ i.residue }}</td><td>{{ i.distance_angstrom }}</td><td>{{ i.detail }}</td></tr>
         {% endfor %}
+        </tbody>
       </table>
+      </div>
       {% else %}
-      <p class="nohit">No significant contacts detected within the distance thresholds.</p>
+      <p class="sub">No significant contacts detected within the distance thresholds.</p>
       {% endif %}
     </div>
 
@@ -117,14 +121,14 @@
         <div><b>Box center (Å)</b>{{ box.get('center',[])|join(', ') }}</div>
         <div><b>Box size (Å)</b>{{ box.get('size',[])|join(', ') }}</div>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin-top:12px">Full data is on disk in <code>{{ out_dir }}</code> — <code>results.json</code>, <code>report.md</code>, and per-pose PDB files for viewing in PyMOL/Chimera.</p>
+      <p class="sub" style="margin-top:12px;">Full data is on disk in <code>{{ out_dir }}</code> — <code>results.json</code>, <code>report.md</code>, and per-pose PDB files for viewing in PyMOL/Chimera.</p>
     </div>
 
-    <p><a class="btn" href="/">← New docking run</a></p>
+    <a class="btn btn-ghost btn-sm" href="/">← New docking run</a>
   {% else %}
-    <div class="card">
+    <div class="card" style="animation-delay:0s;">
       <h2>No results yet</h2>
-      <p>Start a run from the <a href="/">main page</a>.</p>
+      <p class="sub">Start a run from the <a href="/">main page</a>.</p>
     </div>
   {% endif %}
 </main>
